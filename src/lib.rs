@@ -559,9 +559,414 @@ impl AuthController {
     // 5. Views (React Components in resources/js/Pages)
     let auth_page_dir = "src/resources/js/Pages/Auth";
     fs::create_dir_all(auth_page_dir).ok();
-    
+
+    // 5.0 Create Components dir & shared components
+    let components_dir = "src/resources/js/Components";
+    fs::create_dir_all(components_dir).ok();
+
+    let toast_template = r##"import React, { useState, useEffect, useCallback } from 'react';
+
+const ICONS = {
+  success: (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+      <circle cx="10" cy="10" r="10" fill="currentColor" opacity="0.15" />
+      <path d="M6 10.5L8.5 13L14 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+  error: (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+      <circle cx="10" cy="10" r="10" fill="currentColor" opacity="0.15" />
+      <path d="M7 7L13 13M13 7L7 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  ),
+  warning: (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+      <circle cx="10" cy="10" r="10" fill="currentColor" opacity="0.15" />
+      <path d="M10 6V11" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <circle cx="10" cy="14" r="1" fill="currentColor" />
+    </svg>
+  ),
+  info: (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+      <circle cx="10" cy="10" r="10" fill="currentColor" opacity="0.15" />
+      <path d="M10 9V14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <circle cx="10" cy="6.5" r="1" fill="currentColor" />
+    </svg>
+  ),
+};
+
+const STYLES = {
+  success: {
+    bg: 'rgba(16, 185, 129, 0.08)',
+    border: 'rgba(16, 185, 129, 0.25)',
+    color: '#34d399',
+    progress: '#10b981',
+    shadow: '0 8px 32px rgba(16, 185, 129, 0.15)',
+  },
+  error: {
+    bg: 'rgba(244, 63, 94, 0.08)',
+    border: 'rgba(244, 63, 94, 0.25)',
+    color: '#fb7185',
+    progress: '#f43f5e',
+    shadow: '0 8px 32px rgba(244, 63, 94, 0.15)',
+  },
+  warning: {
+    bg: 'rgba(245, 158, 11, 0.08)',
+    border: 'rgba(245, 158, 11, 0.25)',
+    color: '#fbbf24',
+    progress: '#f59e0b',
+    shadow: '0 8px 32px rgba(245, 158, 11, 0.15)',
+  },
+  info: {
+    bg: 'rgba(99, 102, 241, 0.08)',
+    border: 'rgba(99, 102, 241, 0.25)',
+    color: '#818cf8',
+    progress: '#6366f1',
+    shadow: '0 8px 32px rgba(99, 102, 241, 0.15)',
+  },
+};
+
+function SingleToast({ id, type, message, duration = 5000, onDismiss }) {
+  const [isVisible, setIsVisible] = useState(false);
+  const [isLeaving, setIsLeaving] = useState(false);
+  const [progress, setProgress] = useState(100);
+
+  const style = STYLES[type] || STYLES.info;
+
+  const dismiss = useCallback(() => {
+    setIsLeaving(true);
+    setTimeout(() => onDismiss(id), 350);
+  }, [id, onDismiss]);
+
+  useEffect(() => {
+    const enterTimer = setTimeout(() => setIsVisible(true), 10);
+    const dismissTimer = setTimeout(() => dismiss(), duration);
+    const startTime = Date.now();
+    const progressInterval = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const remaining = Math.max(0, 100 - (elapsed / duration) * 100);
+      setProgress(remaining);
+      if (remaining <= 0) clearInterval(progressInterval);
+    }, 30);
+
+    return () => {
+      clearTimeout(enterTimer);
+      clearTimeout(dismissTimer);
+      clearInterval(progressInterval);
+    };
+  }, [duration, dismiss]);
+
+  return (
+    <div
+      style={{
+        background: style.bg,
+        border: `1px solid ${style.border}`,
+        borderRadius: '16px',
+        padding: '14px 18px',
+        marginBottom: '10px',
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: '12px',
+        color: style.color,
+        backdropFilter: 'blur(20px)',
+        boxShadow: style.shadow,
+        transform: isVisible && !isLeaving
+          ? 'translateX(0) scale(1)'
+          : isLeaving
+            ? 'translateX(120%) scale(0.9)'
+            : 'translateX(120%) scale(0.9)',
+        opacity: isVisible && !isLeaving ? 1 : 0,
+        transition: 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
+        position: 'relative',
+        overflow: 'hidden',
+        minWidth: '320px',
+        maxWidth: '420px',
+        cursor: 'pointer',
+      }}
+      onClick={dismiss}
+      role="alert"
+    >
+      <div style={{ flexShrink: 0, marginTop: '1px' }}>{ICONS[type] || ICONS.info}</div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{
+          fontSize: '11px',
+          fontWeight: 700,
+          textTransform: 'uppercase',
+          letterSpacing: '0.08em',
+          opacity: 0.7,
+          marginBottom: '2px',
+        }}>
+          {type === 'success' && 'Berhasil'}
+          {type === 'error' && 'Kesalahan'}
+          {type === 'warning' && 'Peringatan'}
+          {type === 'info' && 'Informasi'}
+        </div>
+        <div style={{
+          fontSize: '13px',
+          fontWeight: 500,
+          color: '#e2e8f0',
+          lineHeight: 1.5,
+          wordBreak: 'break-word',
+        }}>{message}</div>
+      </div>
+      <button
+        onClick={(e) => { e.stopPropagation(); dismiss(); }}
+        style={{
+          background: 'none',
+          border: 'none',
+          color: style.color,
+          cursor: 'pointer',
+          padding: '2px',
+          opacity: 0.5,
+          transition: 'opacity 0.2s',
+          flexShrink: 0,
+          marginTop: '1px',
+        }}
+      >
+        ✕
+      </button>
+      <div style={{
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: '3px',
+        background: `${style.progress}15`,
+        borderRadius: '0 0 16px 16px',
+        overflow: 'hidden',
+      }}>
+        <div style={{
+          width: `${progress}%`,
+          height: '100%',
+          background: `linear-gradient(90deg, ${style.progress}, ${style.progress}aa)`,
+          transition: 'width 0.1s linear',
+          borderRadius: '0 0 16px 16px',
+        }} />
+      </div>
+    </div>
+  );
+}
+
+export default function Toast({ flash, duration = 5000, position = 'top-right' }) {
+  const [toasts, setToasts] = useState([]);
+
+  useEffect(() => {
+    if (!flash) return;
+    const newToasts = [];
+    if (flash.success) newToasts.push({ id: Date.now() + '_s', type: 'success', message: flash.success });
+    if (flash.error) newToasts.push({ id: Date.now() + '_e', type: 'error', message: flash.error });
+    if (flash.warning) newToasts.push({ id: Date.now() + '_w', type: 'warning', message: flash.warning });
+    if (flash.info) newToasts.push({ id: Date.now() + '_i', type: 'info', message: flash.info });
+
+    if (newToasts.length > 0) {
+      setToasts(prev => [...prev, ...newToasts]);
+    }
+  }, [flash?.success, flash?.error, flash?.warning, flash?.info]);
+
+  const handleDismiss = useCallback((id) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  }, []);
+
+  const positionStyle = {
+    'top-right': { top: '24px', right: '24px' },
+    'top-left': { top: '24px', left: '24px' },
+    'bottom-right': { bottom: '24px', right: '24px' },
+    'bottom-left': { bottom: '24px', left: '24px' },
+  };
+
+  if (toasts.length === 0) return null;
+
+  return (
+    <div style={{ position: 'fixed', zIndex: 99999, pointerEvents: 'none', ...positionStyle[position] }}>
+      <div style={{ pointerEvents: 'auto' }}>
+        {toasts.map(toast => (
+          <SingleToast
+            key={toast.id}
+            id={toast.id}
+            type={toast.type}
+            message={toast.message}
+            duration={duration}
+            onDismiss={handleDismiss}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+"##;
+
+    let alert_banner_template = r##"import React from 'react';
+
+const ALERT_STYLES = {
+  success: {
+    bg: 'rgba(16, 185, 129, 0.08)',
+    border: 'rgba(16, 185, 129, 0.2)',
+    color: '#34d399',
+    icon: '✅',
+  },
+  error: {
+    bg: 'rgba(244, 63, 94, 0.08)',
+    border: 'rgba(244, 63, 94, 0.2)',
+    color: '#fb7185',
+    icon: '❌',
+  },
+  warning: {
+    bg: 'rgba(245, 158, 11, 0.08)',
+    border: 'rgba(245, 158, 11, 0.2)',
+    color: '#fbbf24',
+    icon: '⚠️',
+  },
+  info: {
+    bg: 'rgba(99, 102, 241, 0.08)',
+    border: 'rgba(99, 102, 241, 0.2)',
+    color: '#818cf8',
+    icon: 'ℹ️',
+  },
+};
+
+export default function AlertBanner({ type = 'info', message, onDismiss }) {
+  if (!message) return null;
+  const style = ALERT_STYLES[type] || ALERT_STYLES.info;
+
+  return (
+    <div
+      role="alert"
+      style={{
+        background: style.bg,
+        border: `1px solid ${style.border}`,
+        borderRadius: '14px',
+        padding: '14px 18px',
+        marginBottom: '20px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+        animation: 'alertSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
+      }}
+    >
+      <span style={{ fontSize: '16px', flexShrink: 0 }}>{style.icon}</span>
+      <span style={{ flex: 1, fontSize: '13px', fontWeight: 600, color: style.color, lineHeight: 1.5 }}>{message}</span>
+      {onDismiss && (
+        <button
+          onClick={onDismiss}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: style.color,
+            cursor: 'pointer',
+            padding: '2px 4px',
+            opacity: 0.6,
+            transition: 'opacity 0.2s',
+            fontSize: '14px',
+          }}
+        >
+          ✕
+        </button>
+      )}
+      <style>{`
+        @keyframes alertSlideIn {
+          from { opacity: 0; transform: translateY(-8px) scale(0.97); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+      `}</style>
+    </div>
+  );
+}
+"##;
+
+    let form_input_template = r##"import React from 'react';
+
+export default function FormInput({
+  label,
+  type = 'text',
+  value,
+  onChange,
+  error,
+  placeholder,
+  required = false,
+  autoFocus = false,
+  disabled = false,
+}) {
+  const hasError = !!error;
+
+  return (
+    <div>
+      {label && (
+        <label style={{
+          display: 'block',
+          fontSize: '11px',
+          fontWeight: 700,
+          textTransform: 'uppercase',
+          letterSpacing: '0.08em',
+          marginBottom: '8px',
+          color: hasError ? '#fb7185' : '#94a3b8',
+          transition: 'color 0.3s ease',
+        }}>{label}</label>
+      )}
+      <input
+        type={type}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        required={required}
+        autoFocus={autoFocus}
+        disabled={disabled}
+        style={{
+          width: '100%',
+          boxSizing: 'border-box',
+          background: 'rgba(2, 6, 23, 0.8)',
+          border: `1px solid ${hasError ? 'rgba(244, 63, 94, 0.5)' : 'rgba(30, 41, 59, 1)'}`,
+          borderRadius: '12px',
+          padding: '12px 14px',
+          fontSize: '14px',
+          color: '#ffffff',
+          outline: 'none',
+          transition: 'all 0.3s ease',
+          opacity: disabled ? 0.5 : 1,
+        }}
+        onFocus={(e) => {
+          e.target.style.borderColor = hasError ? 'rgba(244, 63, 94, 0.7)' : 'rgba(99, 102, 241, 0.5)';
+          e.target.style.boxShadow = hasError ? '0 0 0 3px rgba(244, 63, 94, 0.1)' : '0 0 0 3px rgba(99, 102, 241, 0.1)';
+        }}
+        onBlur={(e) => {
+          e.target.style.borderColor = hasError ? 'rgba(244, 63, 94, 0.5)' : 'rgba(30, 41, 59, 1)';
+          e.target.style.boxShadow = 'none';
+        }}
+      />
+      {hasError && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '5px',
+          marginTop: '6px',
+          animation: 'errorShake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97)',
+        }}>
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ flexShrink: 0 }}>
+            <circle cx="6" cy="6" r="6" fill="rgba(244, 63, 94, 0.15)" />
+            <path d="M6 3.5V6.5" stroke="#fb7185" strokeWidth="1.2" strokeLinecap="round" />
+            <circle cx="6" cy="8.2" r="0.6" fill="#fb7185" />
+          </svg>
+          <span style={{ fontSize: '12px', fontWeight: 600, color: '#fb7185', lineHeight: 1.3 }}>{error}</span>
+        </div>
+      )}
+      <style>{`
+        @keyframes errorShake {
+          0%, 100% { transform: translateX(0); }
+          20% { transform: translateX(-4px); }
+          40% { transform: translateX(4px); }
+          60% { transform: translateX(-2px); }
+          80% { transform: translateX(2px); }
+        }
+      `}</style>
+    </div>
+  );
+}
+"##;
+
     let login_template = r##"import React from 'react';
 import { Link, useForm, usePage } from '@inertiajs/react';
+import Toast from '../../Components/Toast';
+import AlertBanner from '../../Components/AlertBanner';
+import FormInput from '../../Components/FormInput';
 
 export default function Login() {
   const { flash } = usePage().props;
@@ -578,6 +983,8 @@ export default function Login() {
 
   return (
     <div className="min-h-screen bg-gradient-to-tr from-slate-950 via-slate-900 to-indigo-950 flex items-center justify-center p-6 text-slate-100 font-sans">
+      <Toast flash={flash} />
+
       <div className="w-full max-w-md bg-slate-900/60 backdrop-blur-md border border-slate-800/80 rounded-3xl p-8 shadow-2xl relative overflow-hidden glassmorphism">
         <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -590,44 +997,29 @@ export default function Login() {
           <p className="text-slate-400 text-sm mt-2">Silakan masuk ke akun Anda</p>
         </div>
 
-        {flash?.success && (
-          <div className="mb-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm font-semibold text-center animate-pulse">
-            {flash.success}
-          </div>
-        )}
-
-        {flash?.error && (
-          <div className="mb-6 p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-sm font-semibold text-center">
-            {flash.error}
-          </div>
-        )}
+        {flash?.success && <AlertBanner type="success" message={flash.success} />}
+        {flash?.error && <AlertBanner type="error" message={flash.error} />}
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Email Address</label>
-            <input
-              type="email"
-              value={data.email}
-              onChange={(e) => setData('email', e.target.value)}
-              className="w-full bg-slate-950/80 border border-slate-800 rounded-xl p-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500/50 transition-all duration-300"
-              placeholder="nama@email.com"
-              required
-            />
-            {errors.email && <p className="text-rose-500 text-xs mt-1 font-semibold">{errors.email}</p>}
-          </div>
+          <FormInput
+            label="Email Address"
+            type="email"
+            value={data.email}
+            onChange={(e) => setData('email', e.target.value)}
+            error={errors.email}
+            placeholder="nama@email.com"
+            required
+          />
 
-          <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Password</label>
-            <input
-              type="password"
-              value={data.password}
-              onChange={(e) => setData('password', e.target.value)}
-              className="w-full bg-slate-950/80 border border-slate-800 rounded-xl p-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500/50 transition-all duration-300"
-              placeholder="••••••••"
-              required
-            />
-            {errors.password && <p className="text-rose-500 text-xs mt-1 font-semibold">{errors.password}</p>}
-          </div>
+          <FormInput
+            label="Password"
+            type="password"
+            value={data.password}
+            onChange={(e) => setData('password', e.target.value)}
+            error={errors.password}
+            placeholder="••••••••"
+            required
+          />
 
           <div className="flex items-center justify-between text-sm">
             <label className="flex items-center space-x-2 text-slate-400 cursor-pointer">
@@ -666,9 +1058,13 @@ export default function Login() {
 "##;
 
     let register_template = r##"import React from 'react';
-import { Link, useForm } from '@inertiajs/react';
+import { Link, useForm, usePage } from '@inertiajs/react';
+import Toast from '../../Components/Toast';
+import AlertBanner from '../../Components/AlertBanner';
+import FormInput from '../../Components/FormInput';
 
 export default function Register() {
+  const { flash } = usePage().props;
   const { data, setData, post, processing, errors } = useForm({
     name: '',
     email: '',
@@ -682,6 +1078,8 @@ export default function Register() {
 
   return (
     <div className="min-h-screen bg-gradient-to-tr from-slate-950 via-slate-900 to-indigo-950 flex items-center justify-center p-6 text-slate-100 font-sans">
+      <Toast flash={flash} />
+
       <div className="w-full max-w-md bg-slate-900/60 backdrop-blur-md border border-slate-800/80 rounded-3xl p-8 shadow-2xl relative overflow-hidden glassmorphism">
         <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -694,45 +1092,39 @@ export default function Register() {
           <p className="text-slate-400 text-sm mt-2">Mulai perjalanan Anda bersama kami</p>
         </div>
 
+        {flash?.error && <AlertBanner type="error" message={flash.error} />}
+        {flash?.success && <AlertBanner type="success" message={flash.success} />}
+
         <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Nama Lengkap</label>
-            <input
-              type="text"
-              value={data.name}
-              onChange={(e) => setData('name', e.target.value)}
-              className="w-full bg-slate-950/80 border border-slate-800 rounded-xl p-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500/50 transition-all duration-300"
-              placeholder="Nama Lengkap Anda"
-              required
-            />
-            {errors.name && <p className="text-rose-500 text-xs mt-1 font-semibold">{errors.name}</p>}
-          </div>
+          <FormInput
+            label="Nama Lengkap"
+            type="text"
+            value={data.name}
+            onChange={(e) => setData('name', e.target.value)}
+            error={errors.name}
+            placeholder="Nama Lengkap Anda"
+            required
+          />
 
-          <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Email Address</label>
-            <input
-              type="email"
-              value={data.email}
-              onChange={(e) => setData('email', e.target.value)}
-              className="w-full bg-slate-950/80 border border-slate-800 rounded-xl p-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500/50 transition-all duration-300"
-              placeholder="nama@email.com"
-              required
-            />
-            {errors.email && <p className="text-rose-500 text-xs mt-1 font-semibold">{errors.email}</p>}
-          </div>
+          <FormInput
+            label="Email Address"
+            type="email"
+            value={data.email}
+            onChange={(e) => setData('email', e.target.value)}
+            error={errors.email}
+            placeholder="nama@email.com"
+            required
+          />
 
-          <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Password</label>
-            <input
-              type="password"
-              value={data.password}
-              onChange={(e) => setData('password', e.target.value)}
-              className="w-full bg-slate-950/80 border border-slate-800 rounded-xl p-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500/50 transition-all duration-300"
-              placeholder="Min. 8 karakter"
-              required
-            />
-            {errors.password && <p className="text-rose-500 text-xs mt-1 font-semibold">{errors.password}</p>}
-          </div>
+          <FormInput
+            label="Password"
+            type="password"
+            value={data.password}
+            onChange={(e) => setData('password', e.target.value)}
+            error={errors.password}
+            placeholder="Min. 8 karakter"
+            required
+          />
 
           <button
             type="submit"
@@ -757,6 +1149,9 @@ export default function Register() {
 
     let forgot_template = r##"import React from 'react';
 import { Link, useForm, usePage } from '@inertiajs/react';
+import Toast from '../../Components/Toast';
+import AlertBanner from '../../Components/AlertBanner';
+import FormInput from '../../Components/FormInput';
 
 export default function ForgotPassword() {
   const { flash } = usePage().props;
@@ -771,6 +1166,8 @@ export default function ForgotPassword() {
 
   return (
     <div className="min-h-screen bg-gradient-to-tr from-slate-950 via-slate-900 to-indigo-950 flex items-center justify-center p-6 text-slate-100 font-sans">
+      <Toast flash={flash} />
+
       <div className="w-full max-w-md bg-slate-900/60 backdrop-blur-md border border-slate-800/80 rounded-3xl p-8 shadow-2xl relative overflow-hidden glassmorphism">
         <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -783,26 +1180,20 @@ export default function ForgotPassword() {
           <p className="text-slate-400 text-sm mt-2">Kami akan mengirimkan instruksi ke email Anda</p>
         </div>
 
-        {flash?.success && (
-          <div className="mb-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm font-semibold text-center animate-pulse">
-            {flash.success}
-          </div>
-        )}
+        {flash?.success && <AlertBanner type="success" message={flash.success} />}
+        {flash?.error && <AlertBanner type="error" message={flash.error} />}
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Email Address</label>
-            <input
-              type="email"
-              value={data.email}
-              onChange={(e) => setData('email', e.target.value)}
-              className="w-full bg-slate-950/80 border border-slate-800 rounded-xl p-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500/50 transition-all duration-300"
-              placeholder="nama@email.com"
-              required
-              autoFocus
-            />
-            {errors.email && <p className="text-rose-500 text-xs mt-1 font-semibold">{errors.email}</p>}
-          </div>
+          <FormInput
+            label="Email Address"
+            type="email"
+            value={data.email}
+            onChange={(e) => setData('email', e.target.value)}
+            error={errors.email}
+            placeholder="nama@email.com"
+            required
+            autoFocus
+          />
 
           <button
             type="submit"
@@ -825,6 +1216,21 @@ export default function ForgotPassword() {
 }
 "##;
 
+    let toast_view = "src/resources/js/Components/Toast.jsx";
+    if !std::path::Path::new(toast_view).exists() {
+        fs::write(toast_view, toast_template).ok();
+    }
+
+    let alert_banner_view = "src/resources/js/Components/AlertBanner.jsx";
+    if !std::path::Path::new(alert_banner_view).exists() {
+        fs::write(alert_banner_view, alert_banner_template).ok();
+    }
+
+    let form_input_view = "src/resources/js/Components/FormInput.jsx";
+    if !std::path::Path::new(form_input_view).exists() {
+        fs::write(form_input_view, form_input_template).ok();
+    }
+
     let login_view = "src/resources/js/Pages/Auth/Login.jsx";
     if !std::path::Path::new(login_view).exists() {
         fs::write(login_view, login_template).ok();
@@ -843,9 +1249,13 @@ export default function ForgotPassword() {
     let reset_view = "src/resources/js/Pages/Auth/ResetPassword.jsx";
     if !std::path::Path::new(reset_view).exists() {
         let reset_template = r##"import React from 'react';
-import { useForm } from '@inertiajs/react';
+import { useForm, usePage } from '@inertiajs/react';
+import Toast from '../../Components/Toast';
+import AlertBanner from '../../Components/AlertBanner';
+import FormInput from '../../Components/FormInput';
 
 export default function ResetPassword({ token }) {
+  const { flash } = usePage().props;
   const { data, setData, post, processing, errors } = useForm({
     token: token || '',
     password: '',
@@ -858,6 +1268,8 @@ export default function ResetPassword({ token }) {
 
   return (
     <div className="min-h-screen bg-gradient-to-tr from-slate-950 via-slate-900 to-indigo-950 flex items-center justify-center p-6 text-slate-100 font-sans">
+      <Toast flash={flash} />
+
       <div className="w-full max-w-md bg-slate-900/60 backdrop-blur-md border border-slate-800/80 rounded-3xl p-8 shadow-2xl relative overflow-hidden glassmorphism">
         <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -870,22 +1282,21 @@ export default function ResetPassword({ token }) {
           <p className="text-slate-400 text-sm mt-2">Silakan masukkan password baru Anda</p>
         </div>
 
+        {flash?.error && <AlertBanner type="error" message={flash.error} />}
+
         <form onSubmit={handleSubmit} className="space-y-5">
           <input type="hidden" value={data.token} />
 
-          <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Password Baru</label>
-            <input
-              type="password"
-              value={data.password}
-              onChange={(e) => setData('password', e.target.value)}
-              className="w-full bg-slate-950/80 border border-slate-800 rounded-xl p-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500/50 transition-all duration-300"
-              placeholder="Minimal 8 karakter"
-              required
-              autoFocus
-            />
-            {errors.password && <p className="text-rose-500 text-xs mt-1 font-semibold">{errors.password}</p>}
-          </div>
+          <FormInput
+            label="Password Baru"
+            type="password"
+            value={data.password}
+            onChange={(e) => setData('password', e.target.value)}
+            error={errors.password}
+            placeholder="Minimal 8 karakter"
+            required
+            autoFocus
+          />
 
           <button
             type="submit"
@@ -963,6 +1374,7 @@ export default function ResetPassword({ token }) {
     if !std::path::Path::new(dashboard_view).exists() {
         let dashboard_template = r##"import React from 'react';
 import { Link, router, usePage } from '@inertiajs/react';
+import Toast from '../Components/Toast';
 
 export default function Dashboard({ title, userName, userEmail, totalUsers }) {
   const { flash } = usePage().props;
@@ -1052,12 +1464,8 @@ export default function Dashboard({ title, userName, userEmail, totalUsers }) {
             </div>
           </header>
 
-          {/* Flash Notification */}
-          {flash?.success && (
-            <div className="mb-8 p-4 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-2xl text-sm font-semibold text-center animate-fade-in">
-              ✨ {flash.success}
-            </div>
-          )}
+          {/* Toast Notifications */}
+          <Toast flash={flash} />
 
           {/* Stats Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
@@ -1323,7 +1731,28 @@ pub async fn remove_auth() {
         println!("   {} {}", "✅ Deleted:".green(), model_path.cyan());
     }
 
-    // 5. Delete React Pages/Auth & Dashboard.jsx
+    // 5. Delete Components, React Pages/Auth & Dashboard.jsx
+    let components_dir = "src/resources/js/Components";
+    let toast_view = "src/resources/js/Components/Toast.jsx";
+    if std::path::Path::new(toast_view).exists() {
+        fs::remove_file(toast_view).ok();
+    }
+    let alert_banner_view = "src/resources/js/Components/AlertBanner.jsx";
+    if std::path::Path::new(alert_banner_view).exists() {
+        fs::remove_file(alert_banner_view).ok();
+    }
+    let form_input_view = "src/resources/js/Components/FormInput.jsx";
+    if std::path::Path::new(form_input_view).exists() {
+        fs::remove_file(form_input_view).ok();
+    }
+    if std::path::Path::new(components_dir).exists() {
+        if let Ok(entries) = std::fs::read_dir(components_dir) {
+            if entries.count() == 0 {
+                fs::remove_dir(components_dir).ok();
+            }
+        }
+    }
+
     let auth_page_dir = "src/resources/js/Pages/Auth";
     if std::path::Path::new(auth_page_dir).exists() {
         fs::remove_dir_all(auth_page_dir).ok();
