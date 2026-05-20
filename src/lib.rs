@@ -89,18 +89,17 @@ pub fn router() -> Router<AppState> {
 
     // 2. Update src/routes/mod.rs
     let routes_mod_path = "src/routes/mod.rs";
-    if let Ok(mut content) = fs::read_to_string(routes_mod_path) {
-        if !content.contains("pub mod auth;") {
+    if let Ok(mut content) = fs::read_to_string(routes_mod_path)
+        && !content.contains("pub mod auth;") {
             content.push_str("pub mod auth;\n");
             fs::write(routes_mod_path, content).ok();
             println!("   {} {}", "📝 Updated:".blue(), routes_mod_path.cyan());
         }
-    }
 
     // 3. Update src/routes/web.rs
     let web_route_path = "src/routes/web.rs";
-    if let Ok(mut content) = fs::read_to_string(web_route_path) {
-        if !content.contains("use crate::routes::auth as auth_routes;") {
+    if let Ok(mut content) = fs::read_to_string(web_route_path)
+        && !content.contains("use crate::routes::auth as auth_routes;") {
             content = content.replace("use rustbasic_core::axum::{Router, routing::get};", "use rustbasic_core::axum::{Router, routing::{get, post}, middleware::from_fn};");
             content = content.replace("use rustbasic_core::server::AppState;", "use crate::app::http::controllers::{auth, dashboard_controller};\nuse crate::app::http::middleware::auth::auth_middleware;\nuse rustbasic_core::server::AppState;\nuse crate::routes::auth as auth_routes;");
 
@@ -128,7 +127,6 @@ pub fn router() -> Router<AppState> {
             fs::write(web_route_path, content).ok();
             println!("   {} {}", "📝 Updated:".blue(), web_route_path.cyan());
         }
-    }
 
     // 3.1 Create Password Resets Migration
     let timestamp = chrono::Local::now().format("%Y%m%d_%H%M%S").to_string();
@@ -139,13 +137,12 @@ pub fn router() -> Router<AppState> {
     let mut exists = false;
     if let Ok(entries) = std::fs::read_dir("database/migrations") {
         for entry in entries.flatten() {
-            if let Some(name) = entry.file_name().to_str() {
-                if name.ends_with("_create_password_resets_table.rs") {
+            if let Some(name) = entry.file_name().to_str()
+                && name.ends_with("_create_password_resets_table.rs") {
                     exists = true;
                     println!("   {} {}", "⚠️  Exists:".yellow(), name.cyan());
                     break;
                 }
-            }
         }
     }
 
@@ -241,12 +238,11 @@ pub async fn guest_middleware(req: Request, next: Next) -> impl IntoResponse {
         
         // Update src/app/http/middleware/mod.rs
         let middleware_mod_path = "src/app/http/middleware/mod.rs";
-        if let Ok(mut content) = fs::read_to_string(middleware_mod_path) {
-            if !content.contains("pub mod auth;") {
+        if let Ok(mut content) = fs::read_to_string(middleware_mod_path)
+            && !content.contains("pub mod auth;") {
                 content.push_str("pub mod auth;\n");
                 fs::write(middleware_mod_path, content).ok();
             }
-        }
         println!("   {} {}", "✅ Created:".green(), auth_middleware_path.cyan());
     }
 
@@ -254,7 +250,7 @@ pub async fn guest_middleware(req: Request, next: Next) -> impl IntoResponse {
     let model_path = "src/app/models/password_resets.rs";
     if !std::path::Path::new(model_path).exists() {
         let model_template = r#"use rustbasic_core::sea_orm::entity::prelude::*;
-use serde::{Deserialize, Serialize};
+use rustbasic_core::serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Serialize, Deserialize)]
 #[sea_orm(table_name = "password_resets")]
@@ -274,12 +270,11 @@ impl ActiveModelBehavior for ActiveModel {}
         
         // Update src/app/models/mod.rs
         let models_mod_path = "src/app/models/mod.rs";
-        if let Ok(mut content) = fs::read_to_string(models_mod_path) {
-            if !content.contains("pub mod password_resets;") {
+        if let Ok(mut content) = fs::read_to_string(models_mod_path)
+            && !content.contains("pub mod password_resets;") {
                 content.push_str("pub mod password_resets;\n");
                 fs::write(models_mod_path, content).ok();
             }
-        }
         println!("   {} {}", "✅ Created:".green(), "Model password_resets".cyan());
     }
 
@@ -298,11 +293,11 @@ use rustbasic_core::server::AppState;
 use rustbasic_core::axum::{response::{IntoResponse, Response, Redirect}, extract::State};
 use rustbasic_core::bcrypt::{hash, verify, DEFAULT_COST};
 use rustbasic_core::uuid::Uuid;
-use serde::Deserialize;
-use validator::Validate;
+use rustbasic_core::serde::Deserialize;
+use rustbasic_core::validator::Validate;
 use rustbasic_core::mail::MailService;
 use rustbasic_core::sea_orm::{EntityTrait, ColumnTrait, QueryFilter, Set};
-use serde_json::json;
+use rustbasic_core::serde_json::json;
 
 #[derive(Deserialize, Validate)]
 pub struct RegisterRequest {
@@ -1542,7 +1537,7 @@ use rustbasic_core::requests::Request;
 use rustbasic_core::server::AppState;
 use rustbasic_core::axum::{response::Response, extract::State};
 use rustbasic_core::sea_orm::{EntityTrait, PaginatorTrait};
-use serde_json::json;
+use rustbasic_core::serde_json::json;
 
 pub struct DashboardController;
 
@@ -1570,8 +1565,8 @@ impl DashboardController {
 
     // 7. Update Welcome.jsx
     let welcome_path = "src/resources/js/Pages/Welcome.jsx";
-    if let Ok(content) = fs::read_to_string(welcome_path) {
-        if content.contains("Backend Online") && !content.contains("auth_installed ?") {
+    if let Ok(content) = fs::read_to_string(welcome_path)
+        && content.contains("Backend Online") && !content.contains("auth_installed ?") {
             let target = r#"          <div className="flex items-center gap-4">
             <span className="inline-flex items-center gap-1.5 px-3 h-8 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
               <span className="w-2 h-2 rounded-full bg-emerald-400" style={{ boxShadow: "0 0 10px #34d399" }} />
@@ -1616,7 +1611,6 @@ impl DashboardController {
             fs::write(welcome_path, updated).ok();
             println!("   {} {}", "📝 Updated:".blue(), welcome_path.cyan());
         }
-    }
 
     println!("\n{}", "✨ Authentication scaffolded successfully!".green().bold());
     println!("{}", "Jalankan 'cargo rustbasic route:list' untuk melihat rute baru.".dimmed());
@@ -1634,13 +1628,12 @@ pub async fn remove_auth() {
 
     // 2. Update src/routes/mod.rs
     let routes_mod_path = "src/routes/mod.rs";
-    if let Ok(mut content) = fs::read_to_string(routes_mod_path) {
-        if content.contains("pub mod auth;") {
+    if let Ok(mut content) = fs::read_to_string(routes_mod_path)
+        && content.contains("pub mod auth;") {
             content = content.replace("pub mod auth;\n", "");
             fs::write(routes_mod_path, content).ok();
             println!("   {} {}", "📝 Updated:".blue(), routes_mod_path.cyan());
         }
-    }
 
     // 3. Update src/routes/web.rs
     let web_route_path = "src/routes/web.rs";
@@ -1715,13 +1708,12 @@ pub async fn remove_auth() {
     // 4.1 Delete Password Resets Migration & Model
     if let Ok(entries) = std::fs::read_dir("database/migrations") {
         for entry in entries.flatten() {
-            if let Some(name) = entry.file_name().to_str() {
-                if name.ends_with("_create_password_resets_table.rs") {
+            if let Some(name) = entry.file_name().to_str()
+                && name.ends_with("_create_password_resets_table.rs") {
                     let path = entry.path();
                     fs::remove_file(&path).ok();
                     println!("   {} {}", "✅ Deleted:".green(), path.display().to_string().cyan());
                 }
-            }
         }
     }
     
@@ -1745,13 +1737,11 @@ pub async fn remove_auth() {
     if std::path::Path::new(form_input_view).exists() {
         fs::remove_file(form_input_view).ok();
     }
-    if std::path::Path::new(components_dir).exists() {
-        if let Ok(entries) = std::fs::read_dir(components_dir) {
-            if entries.count() == 0 {
+    if std::path::Path::new(components_dir).exists()
+        && let Ok(entries) = std::fs::read_dir(components_dir)
+            && entries.count() == 0 {
                 fs::remove_dir(components_dir).ok();
             }
-        }
-    }
 
     let auth_page_dir = "src/resources/js/Pages/Auth";
     if std::path::Path::new(auth_page_dir).exists() {
@@ -1773,13 +1763,12 @@ pub async fn remove_auth() {
     }
 
     let middleware_mod_path = "src/app/http/middleware/mod.rs";
-    if let Ok(mut content) = fs::read_to_string(middleware_mod_path) {
-        if content.contains("pub mod auth;") {
+    if let Ok(mut content) = fs::read_to_string(middleware_mod_path)
+        && content.contains("pub mod auth;") {
             content = content.replace("pub mod auth;\n", "");
             fs::write(middleware_mod_path, content).ok();
             println!("   {} {}", "📝 Updated:".blue(), middleware_mod_path.cyan());
         }
-    }
 
     // 6. Delete Dashboard Controller
     let dashboard_path = "src/app/http/controllers/dashboard_controller.rs";
@@ -1845,8 +1834,8 @@ pub async fn remove_auth() {
 
     // 7.3 Restore Welcome.jsx
     let welcome_path = "src/resources/js/Pages/Welcome.jsx";
-    if let Ok(content) = fs::read_to_string(welcome_path) {
-        if content.contains("auth_installed ?") {
+    if let Ok(content) = fs::read_to_string(welcome_path)
+        && content.contains("auth_installed ?") {
             let target = r#"          <div className="flex items-center gap-4">
             <span className="inline-flex items-center gap-1.5 px-3 h-8 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 mr-2">
               <span className="w-2 h-2 rounded-full bg-emerald-400" style={{ boxShadow: "0 0 10px #34d399" }} />
@@ -1891,25 +1880,31 @@ pub async fn remove_auth() {
             fs::write(welcome_path, updated).ok();
             println!("   {} {}", "📝 Restored:".blue(), welcome_path.cyan());
         }
-    }
 
     // 7.4 Delete Migration Record from Database
     println!("   {} {}", "⏳".blue(), "Cleaning up migration records from database...".dimmed());
-    let cfg = rustbasic_core::Config::load();
-    let db_url = if cfg.db_connection == "mysql" {
+    let db_connection = std::env::var("DB_CONNECTION").unwrap_or_else(|_| "sqlite".to_string());
+    let db_host = std::env::var("DB_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
+    let db_port = std::env::var("DB_PORT").unwrap_or_else(|_| "3306".to_string());
+    let db_database = std::env::var("DB_DATABASE").unwrap_or_else(|_| "rustbasic".to_string());
+    let db_username = std::env::var("DB_USERNAME").unwrap_or_else(|_| "root".to_string());
+    let db_password = std::env::var("DB_PASSWORD").unwrap_or_default();
+
+    let db_url = if db_connection == "mysql" {
         format!(
             "mysql://{}:{}@{}:{}/{}",
-            cfg.db_username, cfg.db_password, cfg.db_host, cfg.db_port, cfg.db_database
+            db_username, db_password, db_host, db_port, db_database
         )
     } else {
-        format!("sqlite:database/{}.sqlite?mode=rwc", cfg.db_database)
+        format!("sqlite:database/{}.sqlite?mode=rwc", db_database)
     };
 
     if let Ok(db) = sea_orm::Database::connect(db_url).await {
         use sea_orm::ConnectionTrait;
-        let table_name = if cfg.db_connection == "mysql" { "sea_orm_migrations" } else { "seaql_migrations" };
+        let table_name = if db_connection == "mysql" { "sea_orm_migrations" } else { "seaql_migrations" };
         let sql = format!("DELETE FROM {} WHERE version LIKE '%_create_password_resets_table'", table_name);
-        let _ = db.execute(sea_orm::Statement::from_string(cfg.db_backend(), sql)).await;
+        let db_backend = if db_connection == "mysql" { sea_orm::DbBackend::MySql } else { sea_orm::DbBackend::Sqlite };
+        let _ = db.execute(sea_orm::Statement::from_string(db_backend, sql)).await;
         println!("   {} {}", "✅ Cleaned:".green(), "Database migration records removed.".cyan());
     }
 

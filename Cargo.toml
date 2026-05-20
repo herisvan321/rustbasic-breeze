@@ -1,6 +1,6 @@
 [package]
 name = "rustbasic-breeze"
-version = "0.0.2"
+version = "0.0.5"
 edition = "2024"
 description = "Authentication scaffolding package for the RustBasic Framework."
 license = "MIT"
@@ -8,7 +8,6 @@ homepage = "https://github.com/herisvan321/rustbasic"
 repository = "https://github.com/herisvan321/rustbasic"
 
 [dependencies]
-rustbasic-core = "0.1"
 tokio = { version = "1.52.1", features = ["full"] }
 colored = "3.0"
 chrono = { version = "0.4.39", features = ["serde"] }
