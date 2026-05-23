@@ -60,6 +60,32 @@ pub fn update_migration_mod_rs(mod_name: &str) {
 pub async fn make_auth() {
     println!("\n{}", "🔐 Scaffolding Authentication...".magenta().bold());
 
+    // Dynamically add validator and sea-orm-migration to Cargo.toml if not present
+    if let Ok(mut content) = fs::read_to_string("Cargo.toml") {
+        let mut changed = false;
+        
+        if !content.contains("validator = ") {
+            if let Some(pos) = content.find("[dependencies]") {
+                let insert_pos = pos + "[dependencies]".len();
+                content.insert_str(insert_pos, "\nvalidator = { version = \"0.20\", features = [\"derive\"] }");
+                changed = true;
+            }
+        }
+        
+        if !content.contains("sea-orm-migration = ") {
+            if let Some(pos) = content.find("[dependencies]") {
+                let insert_pos = pos + "[dependencies]".len();
+                content.insert_str(insert_pos, "\nsea-orm-migration = { version = \"1.1\", features = [\"runtime-tokio-rustls\", \"sqlx-sqlite\", \"sqlx-mysql\"], default-features = false }");
+                changed = true;
+            }
+        }
+        
+        if changed {
+            fs::write("Cargo.toml", content).ok();
+            println!("   {} {}", "📝 Updated:".blue(), "Cargo.toml dependencies".cyan());
+        }
+    }
+
     // 1. Create src/routes/auth.rs
     let auth_route_path = "src/routes/auth.rs";
     let auth_route_template = r#"use rustbasic_core::axum::{Router, routing::{get, post}, middleware::from_fn};
@@ -147,8 +173,8 @@ pub fn router() -> Router<AppState> {
     }
 
     if !exists {
-        let migration_template = r#"use sea_orm_migration::prelude::*;
-use async_trait::async_trait;
+        let migration_template = r#"use rustbasic_core::sea_orm_migration::prelude::*;
+use rustbasic_core::async_trait;
 
 #[derive(Iden)]
 enum PasswordResets {
@@ -1906,6 +1932,38 @@ pub async fn remove_auth() {
         let db_backend = if db_connection == "mysql" { sea_orm::DbBackend::MySql } else { sea_orm::DbBackend::Sqlite };
         let _ = db.execute(sea_orm::Statement::from_string(db_backend, sql)).await;
         println!("   {} {}", "✅ Cleaned:".green(), "Database migration records removed.".cyan());
+    }
+
+    // Clean up validator and sea-orm-migration from Cargo.toml
+    if let Ok(mut content) = fs::read_to_string("Cargo.toml") {
+        let mut changed = false;
+        
+        let validator_lines = [
+            "validator = { version = \"0.20\", features = [\"derive\"] }\n",
+            "validator = { version = \"0.20\", features = [\"derive\"] }",
+        ];
+        for line in &validator_lines {
+            if content.contains(line) {
+                content = content.replace(line, "");
+                changed = true;
+            }
+        }
+        
+        let migration_lines = [
+            "sea-orm-migration = { version = \"1.1\", features = [\"runtime-tokio-rustls\", \"sqlx-sqlite\", \"sqlx-mysql\"], default-features = false }\n",
+            "sea-orm-migration = { version = \"1.1\", features = [\"runtime-tokio-rustls\", \"sqlx-sqlite\", \"sqlx-mysql\"], default-features = false }",
+        ];
+        for line in &migration_lines {
+            if content.contains(line) {
+                content = content.replace(line, "");
+                changed = true;
+            }
+        }
+        
+        if changed {
+            fs::write("Cargo.toml", content).ok();
+            println!("   {} {}", "📝 Updated:".blue(), "Cargo.toml dependencies cleaned".cyan());
+        }
     }
 
     println!("\n{}", "✨ Authentication removed successfully!".green().bold());
