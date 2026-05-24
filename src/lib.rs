@@ -275,22 +275,21 @@ pub async fn guest_middleware(req: Request, next: Next) -> impl IntoResponse {
     // 4.1 Create Password Resets Model
     let model_path = "src/app/models/password_resets.rs";
     if !std::path::Path::new(model_path).exists() {
-        let model_template = r#"use rustbasic_core::sea_orm::entity::prelude::*;
-use rustbasic_core::serde::{Deserialize, Serialize};
+        let model_template = r#"use rustbasic_core::model;
+use rustbasic_core::sea_orm::entity::prelude::*;
 
-#[derive(Clone, Debug, PartialEq, DeriveEntityModel, Serialize, Deserialize)]
-#[sea_orm(table_name = "password_resets")]
-pub struct Model {
-    #[sea_orm(primary_key, auto_increment = false)]
-    pub email: String,
-    pub token: String,
-    pub created_at: DateTime,
+model! {
+    table: "password_resets",
+    timestamps: false,
+    fillable: [email, token, created_at],
+    guarded: [],
+    Model {
+        #[sea_orm(primary_key, auto_increment = false)]
+        pub email: String,
+        pub token: String,
+        pub created_at: DateTime,
+    }
 }
-
-#[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
-pub enum Relation {}
-
-impl ActiveModelBehavior for ActiveModel {}
 "#;
         fs::write(model_path, model_template).ok();
         
@@ -298,7 +297,7 @@ impl ActiveModelBehavior for ActiveModel {}
         let models_mod_path = "src/app/models/mod.rs";
         if let Ok(mut content) = fs::read_to_string(models_mod_path)
             && !content.contains("pub mod password_resets;") {
-                content.push_str("pub mod password_resets;\n");
+                content.push_str("pub mod password_resets;\n#[allow(unused_imports)]\npub use password_resets::Entity as PasswordReset;\n");
                 fs::write(models_mod_path, content).ok();
             }
         println!("   {} {}", "✅ Created:".green(), "Model password_resets".cyan());
@@ -313,7 +312,7 @@ impl ActiveModelBehavior for ActiveModel {}
  * --------------------------------------------------------- */
 
 use crate::app::inertia::inertia;
-use crate::app::models::users;
+use crate::app::models::{User, PasswordReset};
 use rustbasic_core::requests::Request;
 use rustbasic_core::server::AppState;
 use rustbasic_core::axum::{response::{IntoResponse, Response, Redirect}, extract::State};
@@ -322,7 +321,7 @@ use rustbasic_core::uuid::Uuid;
 use rustbasic_core::serde::Deserialize;
 use rustbasic_core::validator::Validate;
 use rustbasic_core::mail::MailService;
-use rustbasic_core::sea_orm::{EntityTrait, ColumnTrait, QueryFilter, Set};
+use rustbasic_core::sea_orm::{EntityTrait, ColumnTrait, QueryFilter};
 use rustbasic_core::serde_json::json;
 
 #[derive(Deserialize, Validate)]
@@ -380,8 +379,8 @@ impl AuthController {
         };
 
         // 2. Cek apakah email sudah terdaftar
-        let existing = users::Entity::find()
-            .filter(users::Column::Email.eq(&data.email))
+        let existing = User::find()
+            .filter(crate::app::models::users::Column::Email.eq(&data.email))
             .one(&state.db)
             .await
             .ok()
@@ -396,14 +395,13 @@ impl AuthController {
         let hashed = hash(data.password, DEFAULT_COST).unwrap();
 
         // 4. Simpan ke Database
-        let new_user = users::ActiveModel {
-            name: Set(data.name),
-            email: Set(data.email),
-            password: Set(hashed),
-            ..Default::default()
-        };
+        let create_result = User::create(&state.db, rustbasic_core::serde_json::json!({
+            "name": data.name,
+            "email": data.email,
+            "password": hashed,
+        })).await;
 
-        if let Err(e) = users::Entity::insert(new_user).exec(&state.db).await {
+        if let Err(e) = create_result {
             rustbasic_core::tracing::error!("Gagal menyimpan user: {}", e);
             req.session.set("error", "Gagal mendaftar, coba lagi.");
             return Redirect::to("/register").into_response();
@@ -422,8 +420,8 @@ impl AuthController {
         };
 
         // 2. Ambil User dari DB
-        let user = users::Entity::find()
-            .filter(users::Column::Email.eq(&data.email))
+        let user = User::find()
+            .filter(crate::app::models::users::Column::Email.eq(&data.email))
             .one(&state.db)
             .await
             .ok()
@@ -456,8 +454,8 @@ impl AuthController {
         };
 
         // 1. Cek apakah user ada
-        let user = users::Entity::find()
-            .filter(users::Column::Email.eq(&data.email))
+        let user = User::find()
+            .filter(crate::app::models::users::Column::Email.eq(&data.email))
             .one(&state.db)
             .await
             .ok()
@@ -467,22 +465,14 @@ impl AuthController {
             // 2. Generate Token
             let token = Uuid::new_v4().to_string();
 
-            // 3. Simpan Token
-            let reset = crate::app::models::password_resets::ActiveModel {
-                email: Set(u.email.clone()),
-                token: Set(token.clone()),
-                created_at: Set(rustbasic_core::chrono::Utc::now().naive_utc()),
-            };
-
-            let _ = crate::app::models::password_resets::Entity::insert(reset)
-                .on_conflict(
-                    rustbasic_core::sea_orm::sea_query::OnConflict::column(crate::app::models::password_resets::Column::Email)
-                        .update_column(crate::app::models::password_resets::Column::Token)
-                        .update_column(crate::app::models::password_resets::Column::CreatedAt)
-                        .to_owned()
-                )
-                .exec(&state.db)
-                .await;
+            // 3. Simpan Token (Hapus token lama jika ada, lalu insert)
+            let _ = PasswordReset::delete_by_id(&u.email).exec(&state.db).await;
+            
+            let _ = PasswordReset::create(&state.db, rustbasic_core::serde_json::json!({
+                "email": u.email.clone(),
+                "token": token.clone(),
+                "created_at": rustbasic_core::chrono::Utc::now().naive_utc(),
+            })).await;
 
             // 4. Kirim Email (Gunakan Config::load().mail_*)
             let config = rustbasic_core::Config::load();
@@ -520,7 +510,7 @@ impl AuthController {
         };
 
         // 1. Cari Token
-        let reset = crate::app::models::password_resets::Entity::find()
+        let reset = PasswordReset::find()
             .filter(crate::app::models::password_resets::Column::Token.eq(&data.token))
             .one(&state.db)
             .await
@@ -534,7 +524,7 @@ impl AuthController {
             
             if duration.num_minutes() > 60 {
                 // Hapus token yang sudah kadaluarsa
-                let _ = crate::app::models::password_resets::Entity::delete_by_id(r.email.clone())
+                let _ = PasswordReset::delete_by_id(r.email.clone())
                     .exec(&state.db)
                     .await;
                     
@@ -546,14 +536,14 @@ impl AuthController {
             let hashed = rustbasic_core::bcrypt::hash(data.password, rustbasic_core::bcrypt::DEFAULT_COST).unwrap();
 
             // 4. Update User
-            let _ = users::Entity::update_many()
-                .col_expr(users::Column::Password, rustbasic_core::sea_orm::sea_query::Expr::value(hashed))
-                .filter(users::Column::Email.eq(&r.email))
+            let _ = User::update_many()
+                .col_expr(crate::app::models::users::Column::Password, rustbasic_core::sea_orm::sea_query::Expr::value(hashed))
+                .filter(crate::app::models::users::Column::Email.eq(&r.email))
                 .exec(&state.db)
                 .await;
 
             // 5. Hapus Token
-            let _ = crate::app::models::password_resets::Entity::delete_by_id(r.email)
+            let _ = PasswordReset::delete_by_id(r.email)
                 .exec(&state.db)
                 .await;
 
