@@ -3,6 +3,199 @@ use std::io::{Read, Write};
 use colored::*;
 use regex::Regex;
 
+use std::path::Path;
+
+pub use rustbasic_core::MailService;
+
+/// Menyiapkan scaffolding untuk module email
+pub async fn setup_email() {
+    println!("\n{}", "📧 Setup Email Module...".cyan().bold());
+
+    // 1. Membuat folder templates/emails jika belum ada
+    let email_view_dir = "src/resources/views/emails";
+    if !Path::new(email_view_dir).exists() {
+        fs::create_dir_all(email_view_dir).ok();
+        println!("   {} {}", "✅ Created:".green(), email_view_dir.cyan());
+    }
+
+    // 2. Membuat file template welcome.rb.html jika belum ada
+    let welcome_template_path = format!("{}/welcome.rb.html", email_view_dir);
+    if !Path::new(&welcome_template_path).exists() {
+        let welcome_template = r##"<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1e293b; margin: 0; padding: 0; background-color: #f8fafc; }
+        .container { max-width: 600px; margin: 0 auto; padding: 40px 20px; }
+        .card { background: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.04); border: 1px solid #e2e8f0; }
+        .header { background: linear-gradient(135deg, #4f46e5, #818cf8); padding: 48px 40px; text-align: center; color: white; }
+        .header h1 { margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.03em; }
+        .header p { margin: 8px 0 0 0; font-size: 16px; opacity: 0.9; }
+        .content { padding: 40px; }
+        .greeting { font-size: 20px; font-weight: 700; color: #0f172a; margin-top: 0; margin-bottom: 16px; }
+        p { margin: 16px 0; color: #475569; font-size: 15px; }
+        .button-container { text-align: center; margin: 32px 0; }
+        .button { display: inline-block; padding: 14px 36px; background: linear-gradient(135deg, #4f46e5, #6366f1); color: #ffffff !important; text-decoration: none; border-radius: 12px; font-weight: 600; box-shadow: 0 4px 14px rgba(79, 70, 229, 0.3); transition: all 0.2s ease; }
+        .feature-grid { background: #f8fafc; border-radius: 14px; padding: 24px; margin: 24px 0; border: 1px solid #f1f5f9; }
+        .feature-item { display: flex; align-items: start; margin-bottom: 16px; }
+        .feature-item:last-child { margin-bottom: 0; }
+        .feature-icon { margin-right: 12px; font-size: 18px; line-height: 1.5; }
+        .feature-text { font-size: 14px; color: #334155; }
+        .divider { height: 1px; background: #e2e8f0; margin: 32px 0; }
+        .footer { padding: 0 20px; text-align: center; font-size: 13px; color: #94a3b8; }
+        .footer p { color: #94a3b8; font-size: 13px; margin: 8px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="header">
+                <h1>{{ app_name }}</h1>
+                <p>Selamat Datang di Ekosistem Kami</p>
+            </div>
+            <div class="content">
+                <h2 class="greeting">Halo, {{ name }}!</h2>
+                <p>Terima kasih telah bergabung dengan <strong>{{ app_name }}</strong>. Kami sangat senang menyambut Anda di platform pengembangan web modern bertenaga Rust ini.</p>
+                
+                <div class="feature-grid">
+                    <div class="feature-item">
+                        <span class="feature-icon">⚡</span>
+                        <span class="feature-text"><strong>Performa Kilat:</strong> Rasakan kecepatan luar biasa dengan backend berbasis Rust dan Tokio.</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-icon">🛡️</span>
+                        <span class="feature-text"><strong>Aman secara Bawaan:</strong> Sistem keamanan modern terintegrasi secara default di seluruh siklus aplikasi.</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-icon">🎨</span>
+                        <span class="feature-text"><strong>Inertia & React:</strong> Integrasi frontend yang mulus memberikan pengalaman visual premium yang dinamis.</span>
+                    </div>
+                </div>
+
+                <p>Untuk memulai dan menjelajahi semua fitur hebat yang tersedia, silakan masuk ke dashboard Anda sekarang.</p>
+
+                <div class="button-container">
+                    <a href="{{ dashboard_url }}" class="button">Masuk ke Dashboard</a>
+                </div>
+
+                <p>Jika Anda memiliki pertanyaan atau butuh bantuan, tim kami siap membantu Anda kapan saja. Silakan balas email ini secara langsung.</p>
+                
+                <div class="divider"></div>
+                
+                <p style="font-size: 12px; color: #94a3b8; margin-bottom: 0;">
+                    Email ini dikirim secara otomatis oleh sistem {{ app_name }}. Tolong jangan bagikan tautan login Anda kepada siapa pun demi keamanan akun Anda.
+                </p>
+            </div>
+        </div>
+        <div class="footer">
+            <p>&copy; 2026 {{ app_name }}. All rights reserved.</p>
+            <p>DKI Jakarta, Indonesia</p>
+        </div>
+    </div>
+</body>
+</html>
+"##;
+        fs::write(&welcome_template_path, welcome_template).ok();
+        println!("   {} {}", "✅ Created:".green(), welcome_template_path.cyan());
+    }
+
+    // 3. Membuat file template reset.rb.html jika belum ada
+    let reset_template_path = format!("{}/reset.rb.html", email_view_dir);
+    if !Path::new(&reset_template_path).exists() {
+        let reset_template = r##"<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1e293b; margin: 0; padding: 0; background-color: #f8fafc; }
+        .container { max-width: 600px; margin: 0 auto; padding: 40px 20px; }
+        .card { background: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.04); border: 1px solid #e2e8f0; }
+        .header { background: linear-gradient(135deg, #4f46e5, #818cf8); padding: 48px 40px; text-align: center; color: white; }
+        .header h1 { margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.03em; }
+        .header p { margin: 8px 0 0 0; font-size: 16px; opacity: 0.9; }
+        .content { padding: 40px; }
+        .greeting { font-size: 20px; font-weight: 700; color: #0f172a; margin-top: 0; margin-bottom: 16px; }
+        p { margin: 16px 0; color: #475569; font-size: 15px; }
+        .button-container { text-align: center; margin: 32px 0; }
+        .button { display: inline-block; padding: 14px 36px; background: linear-gradient(135deg, #4f46e5, #6366f1); color: #ffffff !important; text-decoration: none; border-radius: 12px; font-weight: 600; box-shadow: 0 4px 14px rgba(79, 70, 229, 0.3); transition: all 0.2s ease; }
+        .divider { height: 1px; background: #e2e8f0; margin: 32px 0; }
+        .footer { padding: 0 20px; text-align: center; font-size: 13px; color: #94a3b8; }
+        .footer p { color: #94a3b8; font-size: 13px; margin: 8px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="header">
+                <h1>{{ app_name }}</h1>
+                <p>Permintaan Reset Kata Sandi</p>
+            </div>
+            <div class="content">
+                <h2 class="greeting">Halo!</h2>
+                <p>Anda menerima email ini karena kami menerima permintaan reset password untuk akun Anda di <strong>{{ app_name }}</strong>.</p>
+                
+                <div class="button-container">
+                    <a href="{{ reset_url }}" class="button">Reset Password Saya</a>
+                </div>
+
+                <p style="font-size: 14px; color: #64748b;">Tautan reset ini akan kedaluwarsa dalam 60 menit. Jika Anda tidak meminta reset password, abaikan saja email ini.</p>
+                
+                <div class="divider"></div>
+                
+                <p style="font-size: 12px; color: #94a3b8; word-break: break-all;">
+                    Jika tombol tidak berfungsi, salin dan tempel URL berikut di browser Anda:<br>
+                    <span style="color: #4f46e5;">{{ reset_url }}</span>
+                </p>
+            </div>
+        </div>
+        <div class="footer">
+            <p>&copy; 2026 {{ app_name }}. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>
+"##;
+        fs::write(&reset_template_path, reset_template).ok();
+        println!("   {} {}", "✅ Created:".green(), reset_template_path.cyan());
+    }
+
+    // 4. Membuat file script uji coba kirim email di src/bin/send_test_email.rs jika belum ada
+    let bin_dir = "src/bin";
+    if !Path::new(bin_dir).exists() {
+        fs::create_dir_all(bin_dir).ok();
+        println!("   {} {}", "✅ Created:".green(), bin_dir.cyan());
+    }
+
+    let test_email_path = format!("{}/send_test_email.rs", bin_dir);
+    if !Path::new(&test_email_path).exists() {
+        let test_email_script = r#"use rustbasic_core::dotenvy::dotenv;
+use rustbasic_core::MailService;
+
+#[tokio::main]
+async fn main() {
+    // Muat file .env jika ada
+    dotenv().ok();
+    
+    println!("📧 Mengirim email uji coba...");
+    
+    let to = "test@example.com";
+    let subject = "Test Email dari RustBasic";
+    let body = "<h1>Halo!</h1><p>Ini adalah email uji coba yang dikirim menggunakan modul <code>rustbasic-email</code>.</p>";
+    
+    match MailService::send_email(to, subject, body).await {
+        Ok(_) => println!("✅ Email uji coba berhasil dikirim ke {}!", to),
+        Err(e) => eprintln!("❌ Gagal mengirim email uji coba: {}", e),
+    }
+}
+"#;
+        fs::write(&test_email_path, test_email_script).ok();
+        println!("   {} {}", "✅ Created:".green(), test_email_path.cyan());
+    }
+}
+
 pub fn update_controller_mod_rs(mod_name: &str) {
     let mod_path = "src/app/http/controllers/mod.rs";
     let mut content = String::new();
@@ -40,15 +233,9 @@ pub fn update_migration_mod_rs(mod_name: &str) {
     }
 
     // Tambahkan ke list migrations
-    let search_pattern = "fn migrations() -> Vec<Box<dyn sea_orm_migration::prelude::MigrationTrait>> {";
-    let search_pattern_alt = "fn migrations() -> Vec<Box<dyn MigrationTrait>> {";
+    let search_pattern = "fn migrations() -> Vec<Box<dyn MigrationTrait>> {";
     
-    let mut pos = content.find(search_pattern);
-    if pos.is_none() {
-        pos = content.find(search_pattern_alt);
-    }
-    
-    if let Some(_pos) = pos {
+    if let Some(_pos) = content.find(search_pattern) {
         let insert_pos = content.find("        ]").unwrap_or(content.len());
         content.insert_str(insert_pos, &format!("            Box::new({}::Migration),\n", mod_name));
     }
@@ -60,38 +247,16 @@ pub fn update_migration_mod_rs(mod_name: &str) {
 pub async fn make_auth() {
     println!("\n{}", "🔐 Scaffolding Authentication...".magenta().bold());
 
-    // Dynamically add validator and sea-orm-migration to Cargo.toml if not present
-    if let Ok(mut content) = fs::read_to_string("Cargo.toml") {
-        let mut changed = false;
-        
-        if !content.contains("validator = ") {
-            if let Some(pos) = content.find("[dependencies]") {
-                let insert_pos = pos + "[dependencies]".len();
-                content.insert_str(insert_pos, "\nvalidator = { version = \"0.20\", features = [\"derive\"] }");
-                changed = true;
-            }
-        }
-        
-        if !content.contains("sea-orm-migration = ") {
-            if let Some(pos) = content.find("[dependencies]") {
-                let insert_pos = pos + "[dependencies]".len();
-                content.insert_str(insert_pos, "\nsea-orm-migration = { version = \"1.1\", features = [\"runtime-tokio-rustls\", \"sqlx-sqlite\", \"sqlx-mysql\"], default-features = false }");
-                changed = true;
-            }
-        }
-        
-        if changed {
-            fs::write("Cargo.toml", content).ok();
-            println!("   {} {}", "📝 Updated:".blue(), "Cargo.toml dependencies".cyan());
-        }
-    }
+    // Otomatis jalankan setup email sebagai bagian dari paket breeze
+    setup_email().await;
+
+
 
     // 1. Create src/routes/auth.rs
     let auth_route_path = "src/routes/auth.rs";
-    let auth_route_template = r#"use rustbasic_core::axum::{Router, routing::{get, post}, middleware::from_fn};
+    let auth_route_template = r#"use rustbasic_core::{Router, get, post, from_fn, AppState};
 use crate::app::http::controllers::auth;
 use crate::app::http::middleware::auth::guest_middleware;
-use rustbasic_core::server::AppState;
 
 pub fn router() -> Router<AppState> {
     Router::new()
@@ -126,8 +291,8 @@ pub fn router() -> Router<AppState> {
     let web_route_path = "src/routes/web.rs";
     if let Ok(mut content) = fs::read_to_string(web_route_path)
         && !content.contains("use crate::routes::auth as auth_routes;") {
-            content = content.replace("use rustbasic_core::axum::{Router, routing::get};", "use rustbasic_core::axum::{Router, routing::{get, post}, middleware::from_fn};");
-            content = content.replace("use rustbasic_core::server::AppState;", "use crate::app::http::controllers::{auth, dashboard_controller};\nuse crate::app::http::middleware::auth::auth_middleware;\nuse rustbasic_core::server::AppState;\nuse crate::routes::auth as auth_routes;");
+            content = content.replace("use rustbasic_core::{Router, get, AppState};", "use rustbasic_core::{Router, get, post, from_fn, AppState};");
+            content = content.replace("use rustbasic_core::{Router, get, post, from_fn, AppState};", "use crate::app::http::controllers::{auth, dashboard_controller};\nuse crate::app::http::middleware::auth::auth_middleware;\nuse rustbasic_core::{Router, get, post, from_fn, AppState};\nuse crate::routes::auth as auth_routes;");
 
             let merge_logic = r#"let auth_protected_routes = Router::new()
         .route("/dashboard", get(dashboard_controller::DashboardController::index))
@@ -173,48 +338,30 @@ pub fn router() -> Router<AppState> {
     }
 
     if !exists {
-        let migration_template = r#"use rustbasic_core::sea_orm_migration::prelude::*;
+        let migration_template = format!(r#"use rustbasic_core::{{Schema, SchemaManager, MigrationTrait, DbErr}};
 use rustbasic_core::async_trait;
 
-#[derive(Iden)]
-enum PasswordResets {
-    Table,
-    Email,
-    Token,
-    CreatedAt,
-}
-
-#[derive(DeriveMigrationName)]
 pub struct Migration;
 
 #[async_trait]
-impl MigrationTrait for Migration {
-    async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
-        manager
-            .create_table(
-                Table::create()
-                    .table(PasswordResets::Table)
-                    .if_not_exists()
-                    .col(ColumnDef::new(PasswordResets::Email).string().not_null().primary_key())
-                    .col(ColumnDef::new(PasswordResets::Token).string().not_null())
-                    .col(
-                        ColumnDef::new(PasswordResets::CreatedAt)
-                            .timestamp()
-                            .default(Expr::current_timestamp())
-                            .not_null(),
-                    )
-                    .to_owned(),
-            )
-            .await
-    }
+impl MigrationTrait for Migration {{
+    fn name(&self) -> &str {{
+        "{}"
+    }}
 
-    async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
-        manager
-            .drop_table(Table::drop().table(PasswordResets::Table).to_owned())
-            .await
-    }
-}
-"#.to_string();
+    async fn up<'a>(&self, manager: &'a SchemaManager<'a>) -> Result<(), DbErr> {{
+        Schema::create(manager, "password_resets", |table| {{
+            table.no_id();
+            table.string("email").not_null().primary_key();
+            table.string("token").not_null();
+        }}).await
+    }}
+
+    async fn down<'a>(&self, manager: &'a SchemaManager<'a>) -> Result<(), DbErr> {{
+        Schema::drop(manager, "password_resets").await
+    }}
+}}
+"#, migration_name);
         fs::write(&migration_path, migration_template).ok();
         
         update_migration_mod_rs(&migration_name);
@@ -235,26 +382,18 @@ impl MigrationTrait for Migration {
     fs::create_dir_all(auth_middleware_dir).ok();
     let auth_middleware_path = "src/app/http/middleware/auth.rs";
     if !std::path::Path::new(auth_middleware_path).exists() {
-        let middleware_template = r#"use rustbasic_core::axum::{
-    middleware::Next,
-    response::{IntoResponse, Redirect},
-    extract::Request,
-};
-use rustbasic_core::session_manager::RustBasicSessionStore;
-use rustbasic_core::axum_session::Session;
+        let middleware_template = r#"use rustbasic_core::{Request, Response, Next, IntoResponse, Redirect};
 
-pub async fn auth_middleware(req: Request, next: Next) -> impl IntoResponse {
-    let session = req.extensions().get::<Session<RustBasicSessionStore>>().unwrap();
-    if session.get::<i32>("user_id").is_none() {
-        session.set("error", "Silakan login terlebih dahulu");
+pub async fn auth_middleware(req: Request, next: Next) -> Response {
+    if req.session.get::<i32>("user_id").is_none() {
+        req.session.set("error", "Silakan login terlebih dahulu");
         return Redirect::to("/login").into_response();
     }
     next.run(req).await
 }
 
-pub async fn guest_middleware(req: Request, next: Next) -> impl IntoResponse {
-    let session = req.extensions().get::<Session<RustBasicSessionStore>>().unwrap();
-    if session.get::<i32>("user_id").is_some() {
+pub async fn guest_middleware(req: Request, next: Next) -> Response {
+    if req.session.get::<i32>("user_id").is_some() {
         return Redirect::to("/dashboard").into_response();
     }
     next.run(req).await
@@ -276,7 +415,7 @@ pub async fn guest_middleware(req: Request, next: Next) -> impl IntoResponse {
     let model_path = "src/app/models/password_resets.rs";
     if !std::path::Path::new(model_path).exists() {
         let model_template = r#"use rustbasic_core::model;
-use rustbasic_core::sea_orm::entity::prelude::*;
+use rustbasic_core::chrono::NaiveDateTime;
 
 model! {
     table: "password_resets",
@@ -284,10 +423,9 @@ model! {
     fillable: [email, token, created_at],
     guarded: [],
     Model {
-        #[sea_orm(primary_key, auto_increment = false)]
         pub email: String,
         pub token: String,
-        pub created_at: DateTime,
+        pub created_at: NaiveDateTime,
     }
 }
 "#;
@@ -315,46 +453,84 @@ use crate::app::inertia::inertia;
 use crate::app::models::{User, PasswordReset};
 use rustbasic_core::requests::Request;
 use rustbasic_core::server::AppState;
-use rustbasic_core::axum::{response::{IntoResponse, Response, Redirect}, extract::State};
+use rustbasic_core::{IntoResponse, Response, Redirect, State};
 use rustbasic_core::bcrypt::{hash, verify, DEFAULT_COST};
 use rustbasic_core::uuid::Uuid;
 use rustbasic_core::serde::Deserialize;
 use rustbasic_core::validator::Validate;
-use rustbasic_core::mail::MailService;
-use rustbasic_core::sea_orm::{EntityTrait, ColumnTrait, QueryFilter};
+use rustbasic_core::MailService;
+use rustbasic_core::database::DB;
 use rustbasic_core::serde_json::json;
 
-#[derive(Deserialize, Validate)]
+#[derive(Deserialize)]
 pub struct RegisterRequest {
-    #[validate(length(min = 3, message = "Nama minimal 3 karakter"))]
     pub name: String,
-    
-    #[validate(email(message = "Format email tidak valid"))]
     pub email: String,
-    
-    #[validate(length(min = 8, message = "Password minimal 8 karakter"))]
     pub password: String,
 }
 
-#[derive(Deserialize, Validate)]
+impl Validate for RegisterRequest {
+    fn validate(&self) -> Result<(), std::collections::HashMap<String, String>> {
+        let mut errors = std::collections::HashMap::new();
+        if self.name.trim().len() < 3 {
+            errors.insert("name".to_string(), "Nama minimal 3 karakter".to_string());
+        }
+        if !self.email.contains('@') {
+            errors.insert("email".to_string(), "Format email tidak valid".to_string());
+        }
+        if self.password.len() < 8 {
+            errors.insert("password".to_string(), "Password minimal 8 karakter".to_string());
+        }
+        if errors.is_empty() { Ok(()) } else { Err(errors) }
+    }
+}
+
+#[derive(Deserialize)]
 pub struct LoginRequest {
-    #[validate(email(message = "Format email tidak valid"))]
     pub email: String,
     pub password: String,
     pub remember: Option<bool>,
 }
 
-#[derive(Deserialize, Validate)]
+impl Validate for LoginRequest {
+    fn validate(&self) -> Result<(), std::collections::HashMap<String, String>> {
+        let mut errors = std::collections::HashMap::new();
+        if !self.email.contains('@') {
+            errors.insert("email".to_string(), "Format email tidak valid".to_string());
+        }
+        if errors.is_empty() { Ok(()) } else { Err(errors) }
+    }
+}
+
+#[derive(Deserialize)]
 pub struct ForgotPasswordRequest {
-    #[validate(email(message = "Format email tidak valid"))]
     pub email: String,
 }
 
-#[derive(Deserialize, Validate)]
+impl Validate for ForgotPasswordRequest {
+    fn validate(&self) -> Result<(), std::collections::HashMap<String, String>> {
+        let mut errors = std::collections::HashMap::new();
+        if !self.email.contains('@') {
+            errors.insert("email".to_string(), "Format email tidak valid".to_string());
+        }
+        if errors.is_empty() { Ok(()) } else { Err(errors) }
+    }
+}
+
+#[derive(Deserialize)]
 pub struct ResetPasswordRequest {
     pub token: String,
-    #[validate(length(min = 8, message = "Password minimal 8 karakter"))]
     pub password: String,
+}
+
+impl Validate for ResetPasswordRequest {
+    fn validate(&self) -> Result<(), std::collections::HashMap<String, String>> {
+        let mut errors = std::collections::HashMap::new();
+        if self.password.len() < 8 {
+            errors.insert("password".to_string(), "Password minimal 8 karakter".to_string());
+        }
+        if errors.is_empty() { Ok(()) } else { Err(errors) }
+    }
 }
 
 pub struct AuthController;
@@ -379,9 +555,9 @@ impl AuthController {
         };
 
         // 2. Cek apakah email sudah terdaftar
-        let existing = User::find()
-            .filter(crate::app::models::users::Column::Email.eq(&data.email))
-            .one(&state.db)
+        let existing = DB::table(&state.db, "users")
+            .where_("email", &data.email)
+            .first::<User>()
             .await
             .ok()
             .flatten();
@@ -420,9 +596,9 @@ impl AuthController {
         };
 
         // 2. Ambil User dari DB
-        let user = User::find()
-            .filter(crate::app::models::users::Column::Email.eq(&data.email))
-            .one(&state.db)
+        let user = DB::table(&state.db, "users")
+            .where_("email", &data.email)
+            .first::<User>()
             .await
             .ok()
             .flatten();
@@ -454,9 +630,9 @@ impl AuthController {
         };
 
         // 1. Cek apakah user ada
-        let user = User::find()
-            .filter(crate::app::models::users::Column::Email.eq(&data.email))
-            .one(&state.db)
+        let user = DB::table(&state.db, "users")
+            .where_("email", &data.email)
+            .first::<User>()
             .await
             .ok()
             .flatten();
@@ -466,7 +642,10 @@ impl AuthController {
             let token = Uuid::new_v4().to_string();
 
             // 3. Simpan Token (Hapus token lama jika ada, lalu insert)
-            let _ = PasswordReset::delete_by_id(&u.email).exec(&state.db).await;
+            let _ = DB::table(&state.db, "password_resets")
+                .where_("email", &u.email)
+                .delete()
+                .await;
             
             let _ = PasswordReset::create(&state.db, rustbasic_core::serde_json::json!({
                 "email": u.email.clone(),
@@ -510,9 +689,9 @@ impl AuthController {
         };
 
         // 1. Cari Token
-        let reset = PasswordReset::find()
-            .filter(crate::app::models::password_resets::Column::Token.eq(&data.token))
-            .one(&state.db)
+        let reset = DB::table(&state.db, "password_resets")
+            .where_("token", &data.token)
+            .first::<PasswordReset>()
             .await
             .ok()
             .flatten();
@@ -524,8 +703,9 @@ impl AuthController {
             
             if duration.num_minutes() > 60 {
                 // Hapus token yang sudah kadaluarsa
-                let _ = PasswordReset::delete_by_id(r.email.clone())
-                    .exec(&state.db)
+                let _ = DB::table(&state.db, "password_resets")
+                    .where_("email", &r.email)
+                    .delete()
                     .await;
                     
                 req.session.set("error", "Tautan reset password sudah kadaluarsa (melebihi 60 menit).");
@@ -536,15 +716,17 @@ impl AuthController {
             let hashed = rustbasic_core::bcrypt::hash(data.password, rustbasic_core::bcrypt::DEFAULT_COST).unwrap();
 
             // 4. Update User
-            let _ = User::update_many()
-                .col_expr(crate::app::models::users::Column::Password, rustbasic_core::sea_orm::sea_query::Expr::value(hashed))
-                .filter(crate::app::models::users::Column::Email.eq(&r.email))
-                .exec(&state.db)
+            let _ = DB::table(&state.db, "users")
+                .where_("email", &r.email)
+                .update(rustbasic_core::serde_json::json!({
+                    "password": hashed
+                }))
                 .await;
 
             // 5. Hapus Token
-            let _ = PasswordReset::delete_by_id(r.email)
-                .exec(&state.db)
+            let _ = DB::table(&state.db, "password_resets")
+                .where_("email", &r.email)
+                .delete()
                 .await;
 
             req.session.set("success", "Password berhasil diubah. Silakan login.");
@@ -577,36 +759,57 @@ impl AuthController {
 
     let toast_template = r##"import React, { useState, useEffect, useCallback } from 'react';
 
-const ICONS = {
+type ToastType = 'success' | 'error' | 'warning' | 'info';
+
+interface SingleToastProps {
+  id: string;
+  type: ToastType;
+  message: string;
+  duration?: number;
+  onDismiss: (id: string) => void;
+}
+
+interface ToastProps {
+  flash?: {
+    success?: string;
+    error?: string;
+    warning?: string;
+    info?: string;
+  } | null;
+  duration?: number;
+  position?: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left';
+}
+
+const ICONS: Record<ToastType, React.ReactNode> = {
   success: (
     <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-      <circle cx="10" cy="10" r="10" fill="currentColor" opacity="0.15" />
+      <circle cx="10" cy="10" r="10" fill="currentColor" opacity={0.15} />
       <path d="M6 10.5L8.5 13L14 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   ),
   error: (
     <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-      <circle cx="10" cy="10" r="10" fill="currentColor" opacity="0.15" />
+      <circle cx="10" cy="10" r="10" fill="currentColor" opacity={0.15} />
       <path d="M7 7L13 13M13 7L7 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
     </svg>
   ),
   warning: (
     <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-      <circle cx="10" cy="10" r="10" fill="currentColor" opacity="0.15" />
+      <circle cx="10" cy="10" r="10" fill="currentColor" opacity={0.15} />
       <path d="M10 6V11" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
       <circle cx="10" cy="14" r="1" fill="currentColor" />
     </svg>
   ),
   info: (
     <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-      <circle cx="10" cy="10" r="10" fill="currentColor" opacity="0.15" />
+      <circle cx="10" cy="10" r="10" fill="currentColor" opacity={0.15} />
       <path d="M10 9V14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
       <circle cx="10" cy="6.5" r="1" fill="currentColor" />
     </svg>
   ),
 };
 
-const STYLES = {
+const STYLES: Record<ToastType, { bg: string; border: string; color: string; progress: string; shadow: string }> = {
   success: {
     bg: 'rgba(16, 185, 129, 0.08)',
     border: 'rgba(16, 185, 129, 0.25)',
@@ -637,7 +840,7 @@ const STYLES = {
   },
 };
 
-function SingleToast({ id, type, message, duration = 5000, onDismiss }) {
+function SingleToast({ id, type, message, duration = 5000, onDismiss }: SingleToastProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
   const [progress, setProgress] = useState(100);
@@ -758,12 +961,18 @@ function SingleToast({ id, type, message, duration = 5000, onDismiss }) {
   );
 }
 
-export default function Toast({ flash, duration = 5000, position = 'top-right' }) {
-  const [toasts, setToasts] = useState([]);
+interface ToastItem {
+  id: string;
+  type: ToastType;
+  message: string;
+}
+
+export default function Toast({ flash, duration = 5000, position = 'top-right' }: ToastProps) {
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
 
   useEffect(() => {
     if (!flash) return;
-    const newToasts = [];
+    const newToasts: ToastItem[] = [];
     if (flash.success) newToasts.push({ id: Date.now() + '_s', type: 'success', message: flash.success });
     if (flash.error) newToasts.push({ id: Date.now() + '_e', type: 'error', message: flash.error });
     if (flash.warning) newToasts.push({ id: Date.now() + '_w', type: 'warning', message: flash.warning });
@@ -774,11 +983,11 @@ export default function Toast({ flash, duration = 5000, position = 'top-right' }
     }
   }, [flash?.success, flash?.error, flash?.warning, flash?.info]);
 
-  const handleDismiss = useCallback((id) => {
+  const handleDismiss = useCallback((id: string) => {
     setToasts(prev => prev.filter(t => t.id !== id));
   }, []);
 
-  const positionStyle = {
+  const positionStyle: Record<string, React.CSSProperties> = {
     'top-right': { top: '24px', right: '24px' },
     'top-left': { top: '24px', left: '24px' },
     'bottom-right': { bottom: '24px', right: '24px' },
@@ -808,7 +1017,15 @@ export default function Toast({ flash, duration = 5000, position = 'top-right' }
 
     let alert_banner_template = r##"import React from 'react';
 
-const ALERT_STYLES = {
+type AlertType = 'success' | 'error' | 'warning' | 'info';
+
+interface AlertBannerProps {
+  type?: AlertType;
+  message?: string | null;
+  onDismiss?: () => void;
+}
+
+const ALERT_STYLES: Record<AlertType, { bg: string; border: string; color: string; icon: string }> = {
   success: {
     bg: 'rgba(16, 185, 129, 0.08)',
     border: 'rgba(16, 185, 129, 0.2)',
@@ -835,7 +1052,7 @@ const ALERT_STYLES = {
   },
 };
 
-export default function AlertBanner({ type = 'info', message, onDismiss }) {
+export default function AlertBanner({ type = 'info', message, onDismiss }: AlertBannerProps) {
   if (!message) return null;
   const style = ALERT_STYLES[type] || ALERT_STYLES.info;
 
@@ -885,6 +1102,19 @@ export default function AlertBanner({ type = 'info', message, onDismiss }) {
 "##;
 
     let form_input_template = r##"import React from 'react';
+import { useTheme } from '../Layouts/AppLayout';
+
+interface FormInputProps {
+  label?: string;
+  type?: string;
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  error?: string;
+  placeholder?: string;
+  required?: boolean;
+  autoFocus?: boolean;
+  disabled?: boolean;
+}
 
 export default function FormInput({
   label,
@@ -896,7 +1126,8 @@ export default function FormInput({
   required = false,
   autoFocus = false,
   disabled = false,
-}) {
+}: FormInputProps) {
+  const { isDark } = useTheme();
   const hasError = !!error;
 
   return (
@@ -909,7 +1140,7 @@ export default function FormInput({
           textTransform: 'uppercase',
           letterSpacing: '0.08em',
           marginBottom: '8px',
-          color: hasError ? '#fb7185' : '#94a3b8',
+          color: hasError ? '#fb7185' : (isDark ? '#94a3b8' : '#64748b'),
           transition: 'color 0.3s ease',
         }}>{label}</label>
       )}
@@ -924,22 +1155,22 @@ export default function FormInput({
         style={{
           width: '100%',
           boxSizing: 'border-box',
-          background: 'rgba(2, 6, 23, 0.8)',
-          border: `1px solid ${hasError ? 'rgba(244, 63, 94, 0.5)' : 'rgba(30, 41, 59, 1)'}`,
+          background: isDark ? 'rgba(2, 6, 23, 0.8)' : 'rgba(255, 255, 255, 0.9)',
+          border: `1px solid ${hasError ? 'rgba(244, 63, 94, 0.5)' : (isDark ? 'rgba(30, 41, 59, 1)' : 'rgba(203, 213, 225, 1)')}`,
           borderRadius: '12px',
           padding: '12px 14px',
           fontSize: '14px',
-          color: '#ffffff',
+          color: isDark ? '#ffffff' : '#0f172a',
           outline: 'none',
           transition: 'all 0.3s ease',
           opacity: disabled ? 0.5 : 1,
         }}
         onFocus={(e) => {
-          e.target.style.borderColor = hasError ? 'rgba(244, 63, 94, 0.7)' : 'rgba(99, 102, 241, 0.5)';
-          e.target.style.boxShadow = hasError ? '0 0 0 3px rgba(244, 63, 94, 0.1)' : '0 0 0 3px rgba(99, 102, 241, 0.1)';
+          e.target.style.borderColor = hasError ? 'rgba(244, 63, 94, 0.7)' : 'rgba(232, 82, 14, 0.5)';
+          e.target.style.boxShadow = hasError ? '0 0 0 3px rgba(244, 63, 94, 0.1)' : '0 0 0 3px rgba(232, 82, 14, 0.1)';
         }}
         onBlur={(e) => {
-          e.target.style.borderColor = hasError ? 'rgba(244, 63, 94, 0.5)' : 'rgba(30, 41, 59, 1)';
+          e.target.style.borderColor = hasError ? 'rgba(244, 63, 94, 0.5)' : (isDark ? 'rgba(30, 41, 59, 1)' : 'rgba(203, 213, 225, 1)');
           e.target.style.boxShadow = 'none';
         }}
       />
@@ -980,38 +1211,55 @@ import AlertBanner from '../../Components/AlertBanner';
 import FormInput from '../../Components/FormInput';
 
 export default function Login() {
-  const { flash } = usePage().props;
+  const { flash } = usePage<any>().props;
   const { data, setData, post, processing, errors } = useForm({
     email: '',
     password: '',
     remember: false,
   });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     post('/login');
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-tr from-slate-950 via-slate-900 to-indigo-950 flex items-center justify-center p-6 text-slate-100 font-sans">
+    <div style={{ padding: '60px 24px', flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <Toast flash={flash} />
 
-      <div className="w-full max-w-md bg-slate-900/60 backdrop-blur-md border border-slate-800/80 rounded-3xl p-8 shadow-2xl relative overflow-hidden glassmorphism">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="glassmorphism" style={{
+        width: '100%',
+        maxWidth: '420px',
+        background: 'rgba(255, 255, 255, 0.02)',
+        backdropFilter: 'blur(20px)',
+        border: '1px solid rgba(232, 82, 14, 0.15)',
+        borderRadius: '24px',
+        padding: '32px',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+        position: 'relative',
+        overflow: 'hidden',
+      }}>
+        <div style={{
+          position: 'absolute', top: 0, right: 0, width: '128px', height: '128px',
+          background: 'rgba(232, 82, 14, 0.05)', borderRadius: '50%', filter: 'blur(40px)', pointerEvents: 'none'
+        }} />
         
-        <div className="text-center mb-8">
-          <span className="text-xs font-bold tracking-widest text-indigo-400 bg-indigo-500/10 px-3 py-1 rounded-full border border-indigo-500/20 uppercase">
+        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+          <span style={{
+            fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', color: '#e8520e',
+            background: 'rgba(232, 82, 14, 0.08)', border: '1px solid rgba(232, 82, 14, 0.15)',
+            padding: '4px 12px', borderRadius: '999px', textTransform: 'uppercase'
+          }}>
             RustBasic SPA
           </span>
-          <h1 className="text-3xl font-extrabold text-white mt-4 tracking-tight">Selamat Datang</h1>
-          <p className="text-slate-400 text-sm mt-2">Silakan masuk ke akun Anda</p>
+          <h1 style={{ fontSize: '1.75rem', fontWeight: 900, color: 'inherit', marginTop: '16px', marginBottom: '8px' }}>Selamat Datang</h1>
+          <p style={{ fontSize: '0.85rem', color: '#888', margin: 0 }}>Silakan masuk ke akun Anda</p>
         </div>
 
         {flash?.success && <AlertBanner type="success" message={flash.success} />}
         {flash?.error && <AlertBanner type="error" message={flash.error} />}
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <FormInput
             label="Email Address"
             type="email"
@@ -1032,17 +1280,20 @@ export default function Login() {
             required
           />
 
-          <div className="flex items-center justify-between text-sm">
-            <label className="flex items-center space-x-2 text-slate-400 cursor-pointer">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: '#888' }}>
               <input
                 type="checkbox"
                 checked={data.remember}
                 onChange={(e) => setData('remember', e.target.checked)}
-                className="w-4 h-4 rounded border-slate-800 bg-slate-950 text-indigo-600 focus:ring-indigo-500 focus:ring-opacity-25"
+                style={{
+                  width: '16px', height: '16px', borderRadius: '4px',
+                  border: '1px solid rgba(232, 82, 14, 0.2)', background: 'transparent'
+                }}
               />
-              <span className="select-none">Ingat Saya</span>
+              <span style={{ userSelect: 'none' }}>Ingat Saya</span>
             </label>
-            <Link href="/forgot-password" className="text-indigo-400 hover:text-indigo-300 font-semibold transition-colors duration-200" style={{ textDecoration: 'none' }}>
+            <Link href="/forgot-password" style={{ color: '#e8520e', fontWeight: 600, textDecoration: 'none' }}>
               Lupa Password?
             </Link>
           </div>
@@ -1050,15 +1301,28 @@ export default function Login() {
           <button
             type="submit"
             disabled={processing}
-            className="w-full py-3.5 px-4 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white rounded-xl font-bold tracking-wide shadow-[0_0_20px_rgba(99,102,241,0.25)] hover:shadow-[0_0_25px_rgba(99,102,241,0.4)] disabled:opacity-50 transition-all duration-300 transform active:scale-[0.98]"
+            style={{
+              width: '100%',
+              padding: '14px',
+              background: 'linear-gradient(135deg, #e8520e, #d4470b)',
+              border: 'none',
+              borderRadius: '12px',
+              fontWeight: 700,
+              fontSize: '0.9rem',
+              color: '#fff',
+              cursor: 'pointer',
+              boxShadow: '0 4px 20px rgba(232,82,14,0.3)',
+              transition: 'all 0.2s',
+              opacity: processing ? 0.6 : 1,
+            }}
           >
             {processing ? 'MEMROSES...' : 'MASUK KE DASHBOARD'}
           </button>
         </form>
 
-        <p className="text-center text-sm text-slate-500 mt-8">
+        <p style={{ textAlign: 'center', fontSize: '0.85rem', color: '#666', marginTop: '32px', marginBottom: 0 }}>
           Belum punya akun?{' '}
-          <Link href="/register" className="text-indigo-400 hover:underline font-bold transition-colors duration-200" style={{ textDecoration: 'none' }}>
+          <Link href="/register" style={{ color: '#e8520e', fontWeight: 700, textDecoration: 'none' }}>
             Daftar Sekarang
           </Link>
         </p>
@@ -1075,38 +1339,55 @@ import AlertBanner from '../../Components/AlertBanner';
 import FormInput from '../../Components/FormInput';
 
 export default function Register() {
-  const { flash } = usePage().props;
+  const { flash } = usePage<any>().props;
   const { data, setData, post, processing, errors } = useForm({
     name: '',
     email: '',
     password: '',
   });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     post('/register');
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-tr from-slate-950 via-slate-900 to-indigo-950 flex items-center justify-center p-6 text-slate-100 font-sans">
+    <div style={{ padding: '60px 24px', flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <Toast flash={flash} />
 
-      <div className="w-full max-w-md bg-slate-900/60 backdrop-blur-md border border-slate-800/80 rounded-3xl p-8 shadow-2xl relative overflow-hidden glassmorphism">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="glassmorphism" style={{
+        width: '100%',
+        maxWidth: '420px',
+        background: 'rgba(255, 255, 255, 0.02)',
+        backdropFilter: 'blur(20px)',
+        border: '1px solid rgba(232, 82, 14, 0.15)',
+        borderRadius: '24px',
+        padding: '32px',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+        position: 'relative',
+        overflow: 'hidden',
+      }}>
+        <div style={{
+          position: 'absolute', top: 0, right: 0, width: '128px', height: '128px',
+          background: 'rgba(232, 82, 14, 0.05)', borderRadius: '50%', filter: 'blur(40px)', pointerEvents: 'none'
+        }} />
         
-        <div className="text-center mb-8">
-          <span className="text-xs font-bold tracking-widest text-indigo-400 bg-indigo-500/10 px-3 py-1 rounded-full border border-indigo-500/20 uppercase">
+        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+          <span style={{
+            fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', color: '#e8520e',
+            background: 'rgba(232, 82, 14, 0.08)', border: '1px solid rgba(232, 82, 14, 0.15)',
+            padding: '4px 12px', borderRadius: '999px', textTransform: 'uppercase'
+          }}>
             RustBasic SPA
           </span>
-          <h1 className="text-3xl font-extrabold text-white mt-4 tracking-tight">Daftar Akun</h1>
-          <p className="text-slate-400 text-sm mt-2">Mulai perjalanan Anda bersama kami</p>
+          <h1 style={{ fontSize: '1.75rem', fontWeight: 900, color: 'inherit', marginTop: '16px', marginBottom: '8px' }}>Daftar Akun</h1>
+          <p style={{ fontSize: '0.85rem', color: '#888', margin: 0 }}>Mulai perjalanan Anda bersama kami</p>
         </div>
 
         {flash?.error && <AlertBanner type="error" message={flash.error} />}
         {flash?.success && <AlertBanner type="success" message={flash.success} />}
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <FormInput
             label="Nama Lengkap"
             type="text"
@@ -1140,15 +1421,28 @@ export default function Register() {
           <button
             type="submit"
             disabled={processing}
-            className="w-full py-3.5 px-4 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white rounded-xl font-bold tracking-wide shadow-[0_0_20px_rgba(99,102,241,0.25)] hover:shadow-[0_0_25px_rgba(99,102,241,0.4)] disabled:opacity-50 transition-all duration-300 transform active:scale-[0.98]"
+            style={{
+              width: '100%',
+              padding: '14px',
+              background: 'linear-gradient(135deg, #e8520e, #d4470b)',
+              border: 'none',
+              borderRadius: '12px',
+              fontWeight: 700,
+              fontSize: '0.9rem',
+              color: '#fff',
+              cursor: 'pointer',
+              boxShadow: '0 4px 20px rgba(232,82,14,0.3)',
+              transition: 'all 0.2s',
+              opacity: processing ? 0.6 : 1,
+            }}
           >
             {processing ? 'MENDAFTAR...' : 'BUAT AKUN SEKARANG'}
           </button>
         </form>
 
-        <p className="text-center text-sm text-slate-500 mt-8">
+        <p style={{ textAlign: 'center', fontSize: '0.85rem', color: '#666', marginTop: '32px', marginBottom: 0 }}>
           Sudah punya akun?{' '}
-          <Link href="/login" className="text-indigo-400 hover:underline font-bold transition-colors duration-200" style={{ textDecoration: 'none' }}>
+          <Link href="/login" style={{ color: '#e8520e', fontWeight: 700, textDecoration: 'none' }}>
             Login Disini
           </Link>
         </p>
@@ -1165,36 +1459,53 @@ import AlertBanner from '../../Components/AlertBanner';
 import FormInput from '../../Components/FormInput';
 
 export default function ForgotPassword() {
-  const { flash } = usePage().props;
+  const { flash } = usePage<any>().props;
   const { data, setData, post, processing, errors } = useForm({
     email: '',
   });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     post('/forgot-password');
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-tr from-slate-950 via-slate-900 to-indigo-950 flex items-center justify-center p-6 text-slate-100 font-sans">
+    <div style={{ padding: '60px 24px', flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <Toast flash={flash} />
 
-      <div className="w-full max-w-md bg-slate-900/60 backdrop-blur-md border border-slate-800/80 rounded-3xl p-8 shadow-2xl relative overflow-hidden glassmorphism">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="glassmorphism" style={{
+        width: '100%',
+        maxWidth: '420px',
+        background: 'rgba(255, 255, 255, 0.02)',
+        backdropFilter: 'blur(20px)',
+        border: '1px solid rgba(232, 82, 14, 0.15)',
+        borderRadius: '24px',
+        padding: '32px',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+        position: 'relative',
+        overflow: 'hidden',
+      }}>
+        <div style={{
+          position: 'absolute', top: 0, right: 0, width: '128px', height: '128px',
+          background: 'rgba(232, 82, 14, 0.05)', borderRadius: '50%', filter: 'blur(40px)', pointerEvents: 'none'
+        }} />
         
-        <div className="text-center mb-8">
-          <span className="text-xs font-bold tracking-widest text-indigo-400 bg-indigo-500/10 px-3 py-1 rounded-full border border-indigo-500/20 uppercase">
+        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+          <span style={{
+            fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', color: '#e8520e',
+            background: 'rgba(232, 82, 14, 0.08)', border: '1px solid rgba(232, 82, 14, 0.15)',
+            padding: '4px 12px', borderRadius: '999px', textTransform: 'uppercase'
+          }}>
             Keamanan Akun
           </span>
-          <h1 className="text-3xl font-extrabold text-white mt-4 tracking-tight">Lupa Password</h1>
-          <p className="text-slate-400 text-sm mt-2">Kami akan mengirimkan instruksi ke email Anda</p>
+          <h1 style={{ fontSize: '1.75rem', fontWeight: 900, color: 'inherit', marginTop: '16px', marginBottom: '8px' }}>Lupa Password</h1>
+          <p style={{ fontSize: '0.85rem', color: '#888', margin: 0 }}>Kami akan mengirimkan instruksi ke email Anda</p>
         </div>
 
         {flash?.success && <AlertBanner type="success" message={flash.success} />}
         {flash?.error && <AlertBanner type="error" message={flash.error} />}
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <FormInput
             label="Email Address"
             type="email"
@@ -1209,15 +1520,28 @@ export default function ForgotPassword() {
           <button
             type="submit"
             disabled={processing}
-            className="w-full py-3.5 px-4 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white rounded-xl font-bold tracking-wide shadow-[0_0_20px_rgba(99,102,241,0.25)] hover:shadow-[0_0_25px_rgba(99,102,241,0.4)] disabled:opacity-50 transition-all duration-300 transform active:scale-[0.98]"
+            style={{
+              width: '100%',
+              padding: '14px',
+              background: 'linear-gradient(135deg, #e8520e, #d4470b)',
+              border: 'none',
+              borderRadius: '12px',
+              fontWeight: 700,
+              fontSize: '0.9rem',
+              color: '#fff',
+              cursor: 'pointer',
+              boxShadow: '0 4px 20px rgba(232,82,14,0.3)',
+              transition: 'all 0.2s',
+              opacity: processing ? 0.6 : 1,
+            }}
           >
             {processing ? 'MENGIRIM...' : 'KIRIM LINK RESET PASSWORD'}
           </button>
         </form>
 
-        <p className="text-center text-sm text-slate-500 mt-8">
+        <p style={{ textAlign: 'center', fontSize: '0.85rem', color: '#666', marginTop: '32px', marginBottom: 0 }}>
           Ingat password Anda?{' '}
-          <Link href="/login" className="text-indigo-400 hover:underline font-bold transition-colors duration-200" style={{ textDecoration: 'none' }}>
+          <Link href="/login" style={{ color: '#e8520e', fontWeight: 700, textDecoration: 'none' }}>
             Login Disini
           </Link>
         </p>
@@ -1227,37 +1551,37 @@ export default function ForgotPassword() {
 }
 "##;
 
-    let toast_view = "src/resources/js/Components/Toast.jsx";
+    let toast_view = "src/resources/js/Components/Toast.tsx";
     if !std::path::Path::new(toast_view).exists() {
         fs::write(toast_view, toast_template).ok();
     }
 
-    let alert_banner_view = "src/resources/js/Components/AlertBanner.jsx";
+    let alert_banner_view = "src/resources/js/Components/AlertBanner.tsx";
     if !std::path::Path::new(alert_banner_view).exists() {
         fs::write(alert_banner_view, alert_banner_template).ok();
     }
 
-    let form_input_view = "src/resources/js/Components/FormInput.jsx";
+    let form_input_view = "src/resources/js/Components/FormInput.tsx";
     if !std::path::Path::new(form_input_view).exists() {
         fs::write(form_input_view, form_input_template).ok();
     }
 
-    let login_view = "src/resources/js/Pages/Auth/Login.jsx";
+    let login_view = "src/resources/js/Pages/Auth/Login.tsx";
     if !std::path::Path::new(login_view).exists() {
         fs::write(login_view, login_template).ok();
     }
     
-    let register_view = "src/resources/js/Pages/Auth/Register.jsx";
+    let register_view = "src/resources/js/Pages/Auth/Register.tsx";
     if !std::path::Path::new(register_view).exists() {
         fs::write(register_view, register_template).ok();
     }
 
-    let forgot_view = "src/resources/js/Pages/Auth/ForgotPassword.jsx";
+    let forgot_view = "src/resources/js/Pages/Auth/ForgotPassword.tsx";
     if !std::path::Path::new(forgot_view).exists() {
         fs::write(forgot_view, forgot_template).ok();
     }
 
-    let reset_view = "src/resources/js/Pages/Auth/ResetPassword.jsx";
+    let reset_view = "src/resources/js/Pages/Auth/ResetPassword.tsx";
     if !std::path::Path::new(reset_view).exists() {
         let reset_template = r##"import React from 'react';
 import { useForm, usePage } from '@inertiajs/react';
@@ -1265,37 +1589,58 @@ import Toast from '../../Components/Toast';
 import AlertBanner from '../../Components/AlertBanner';
 import FormInput from '../../Components/FormInput';
 
-export default function ResetPassword({ token }) {
-  const { flash } = usePage().props;
+interface ResetPasswordProps {
+  token: string;
+}
+
+export default function ResetPassword({ token }: ResetPasswordProps) {
+  const { flash } = usePage<any>().props;
   const { data, setData, post, processing, errors } = useForm({
     token: token || '',
     password: '',
   });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     post('/reset-password');
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-tr from-slate-950 via-slate-900 to-indigo-950 flex items-center justify-center p-6 text-slate-100 font-sans">
+    <div style={{ padding: '60px 24px', flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <Toast flash={flash} />
 
-      <div className="w-full max-w-md bg-slate-900/60 backdrop-blur-md border border-slate-800/80 rounded-3xl p-8 shadow-2xl relative overflow-hidden glassmorphism">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="glassmorphism" style={{
+        width: '100%',
+        maxWidth: '420px',
+        background: 'rgba(255, 255, 255, 0.02)',
+        backdropFilter: 'blur(20px)',
+        border: '1px solid rgba(232, 82, 14, 0.15)',
+        borderRadius: '24px',
+        padding: '32px',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+        position: 'relative',
+        overflow: 'hidden',
+      }}>
+        <div style={{
+          position: 'absolute', top: 0, right: 0, width: '128px', height: '128px',
+          background: 'rgba(232, 82, 14, 0.05)', borderRadius: '50%', filter: 'blur(40px)', pointerEvents: 'none'
+        }} />
         
-        <div className="text-center mb-8">
-          <span className="text-xs font-bold tracking-widest text-indigo-400 bg-indigo-500/10 px-3 py-1 rounded-full border border-indigo-500/20 uppercase">
+        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+          <span style={{
+            fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', color: '#e8520e',
+            background: 'rgba(232, 82, 14, 0.08)', border: '1px solid rgba(232, 82, 14, 0.15)',
+            padding: '4px 12px', borderRadius: '999px', textTransform: 'uppercase'
+          }}>
             Akses Akun
           </span>
-          <h1 className="text-3xl font-extrabold text-white mt-4 tracking-tight">Reset Password</h1>
-          <p className="text-slate-400 text-sm mt-2">Silakan masukkan password baru Anda</p>
+          <h1 style={{ fontSize: '1.75rem', fontWeight: 900, color: 'inherit', marginTop: '16px', marginBottom: '8px' }}>Reset Password</h1>
+          <p style={{ fontSize: '0.85rem', color: '#888', margin: 0 }}>Silakan masukkan password baru Anda</p>
         </div>
 
         {flash?.error && <AlertBanner type="error" message={flash.error} />}
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <input type="hidden" value={data.token} />
 
           <FormInput
@@ -1312,7 +1657,20 @@ export default function ResetPassword({ token }) {
           <button
             type="submit"
             disabled={processing}
-            className="w-full py-3.5 px-4 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white rounded-xl font-bold tracking-wide shadow-[0_0_20px_rgba(99,102,241,0.25)] hover:shadow-[0_0_25px_rgba(99,102,241,0.4)] disabled:opacity-50 transition-all duration-300 transform active:scale-[0.98]"
+            style={{
+              width: '100%',
+              padding: '14px',
+              background: 'linear-gradient(135deg, #e8520e, #d4470b)',
+              border: 'none',
+              borderRadius: '12px',
+              fontWeight: 700,
+              fontSize: '0.9rem',
+              color: '#fff',
+              cursor: 'pointer',
+              boxShadow: '0 4px 20px rgba(232, 82, 14, 0.3)',
+              transition: 'all 0.2s',
+              opacity: processing ? 0.6 : 1,
+            }}
           >
             {processing ? 'MENYIMPAN...' : 'SIMPAN PASSWORD BARU'}
           </button>
@@ -1324,7 +1682,6 @@ export default function ResetPassword({ token }) {
 "##;
         fs::write(reset_view, reset_template).ok();
     }
-
     // 5.1 Create Email Reset Template (Minijinja string processing is still perfect here)
     let email_reset_view = "src/resources/views/emails/reset.rb.html";
     if !std::path::Path::new(email_reset_view).exists() {
@@ -1381,162 +1738,311 @@ export default function ResetPassword({ token }) {
     }
 
     // 5.2 Create Dashboard Page in React
-    let dashboard_view = "src/resources/js/Pages/Dashboard.jsx";
+    let dashboard_view = "src/resources/js/Pages/Dashboard.tsx";
     if !std::path::Path::new(dashboard_view).exists() {
         let dashboard_template = r##"import React from 'react';
 import { Link, router, usePage } from '@inertiajs/react';
 import Toast from '../Components/Toast';
+import { useTheme } from '../Layouts/AppLayout';
 
-export default function Dashboard({ title, userName, userEmail, totalUsers }) {
-  const { flash } = usePage().props;
+interface DashboardProps {
+  title?: string;
+  userName?: string;
+  userEmail?: string;
+  totalUsers?: number;
+}
 
-  const handleLogout = (e) => {
+export default function Dashboard({ title, userName, userEmail, totalUsers }: DashboardProps) {
+  const { flash } = usePage<any>().props;
+  const { colors, isDark } = useTheme();
+
+  const handleLogout = (e: React.FormEvent) => {
     e.preventDefault();
     router.post('/logout');
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col md:flex-row font-sans">
-      {/* Sidebar */}
-      <aside className="w-full md:w-80 bg-slate-900 border-b md:border-b-0 md:border-r border-slate-800/80 p-6 flex flex-col justify-between relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
-        
-        <div>
-          {/* Logo */}
-          <div className="flex items-center space-x-3 mb-10">
-            <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center font-extrabold text-white text-lg shadow-lg shadow-indigo-600/30">
-              R
-            </div>
-            <span className="text-xl font-extrabold text-white tracking-tight">RustBasic</span>
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      flexGrow: 1,
+      width: '100%',
+      boxSizing: 'border-box',
+    }}>
+      <Toast flash={flash} />
+      
+      <div style={{
+        maxWidth: '1280px',
+        width: '100%',
+        margin: '0 auto',
+        padding: '40px 24px 80px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '32px',
+        position: 'relative',
+        zIndex: 10,
+      }}>
+        {/* Header Section */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '16px',
+        }}>
+          <div>
+            <h1 style={{
+              fontSize: '2.25rem',
+              fontWeight: 900,
+              color: colors.textMain,
+              margin: 0,
+              letterSpacing: '-0.02em',
+            }}>
+              {title || 'Dashboard'}
+            </h1>
+            <p style={{
+              fontSize: '0.9rem',
+              color: colors.textMuted,
+              marginTop: '4px',
+              marginBottom: 0,
+            }}>
+              Selamat datang kembali, kendalikan project Anda secara instan.
+            </p>
           </div>
 
-          {/* User Profile Info Card */}
-          <div className="bg-slate-950/60 border border-slate-800/50 rounded-2xl p-4 mb-8">
-            <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-full flex items-center justify-center font-extrabold text-white text-lg">
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '8px 16px',
+            borderRadius: '999px',
+            fontSize: '0.75rem',
+            fontWeight: 700,
+            background: 'rgba(16,185,129,0.08)',
+            color: '#34d399',
+            border: '1px solid rgba(16,185,129,0.15)',
+          }}>
+            <span style={{
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              background: '#34d399',
+              boxShadow: '0 0 10px #34d399',
+            }} />
+            Server Status: Running
+          </div>
+        </div>
+
+        {/* Stats Grid */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+          gap: '20px',
+        }}>
+          {/* Stat 1 */}
+          <div style={{
+            padding: '28px',
+            borderRadius: '20px',
+            border: `1px solid ${colors.cardBorder}`,
+            background: colors.cardBg,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px',
+          }}>
+            <span style={{
+              fontSize: '0.7rem',
+              fontWeight: 700,
+              color: '#e8520e',
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+            }}>
+              User Terdaftar
+            </span>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+              <span style={{ fontSize: '3rem', fontWeight: 900, color: colors.textMain }}>
+                {totalUsers || 0}
+              </span>
+              <span style={{ fontSize: '0.85rem', color: colors.textMuted }}>
+                pengguna
+              </span>
+            </div>
+          </div>
+
+          {/* Stat 2 */}
+          <div style={{
+            padding: '28px',
+            borderRadius: '20px',
+            border: `1px solid ${colors.cardBorder}`,
+            background: colors.cardBg,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px',
+          }}>
+            <span style={{
+              fontSize: '0.7rem',
+              fontWeight: 700,
+              color: '#ff8c42',
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+            }}>
+              Response Time
+            </span>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+              <span style={{ fontSize: '3rem', fontWeight: 900, color: colors.textMain }}>
+                24
+              </span>
+              <span style={{ fontSize: '1rem', fontWeight: 700, color: colors.textMuted }}>
+                ms
+              </span>
+            </div>
+          </div>
+
+          {/* Stat 3 */}
+          <div style={{
+            padding: '28px',
+            borderRadius: '20px',
+            border: `1px solid ${colors.activeCardBorder}`,
+            background: colors.activeCardBg,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px',
+          }}>
+            <span style={{
+              fontSize: '0.7rem',
+              fontWeight: 700,
+              color: '#e8520e',
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+            }}>
+              Database Status
+            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
+              <span style={{
+                width: '10px',
+                height: '10px',
+                borderRadius: '50%',
+                background: '#34d399',
+                boxShadow: '0 0 12px #34d399',
+              }} />
+              <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#34d399', letterSpacing: '0.05em' }}>
+                HEALTHY
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* User profile & action panel */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+          gap: '24px',
+        }}>
+          {/* User profile card */}
+          <div style={{
+            padding: '32px',
+            borderRadius: '24px',
+            border: `1px solid ${colors.cardBorder}`,
+            background: colors.cardBg,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '20px',
+          }}>
+            <h3 style={{
+              fontSize: '1.15rem',
+              fontWeight: 800,
+              color: colors.textMain,
+              margin: 0,
+            }}>
+              👤 Profil Pengguna
+            </h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #e8520e, #ff8c42)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 800,
+                color: '#fff',
+                fontSize: '1.2rem',
+              }}>
                 {userName ? userName[0].toUpperCase() : 'G'}
               </div>
-              <div className="overflow-hidden">
-                <h4 className="text-sm font-bold text-white truncate">{userName || 'Administrator'}</h4>
-                <p className="text-xs text-slate-500 truncate">{userEmail || 'admin@rustbasic.dev'}</p>
+              <div style={{ overflow: 'hidden' }}>
+                <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: colors.textMain, whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                  {userName || 'Administrator'}
+                </h4>
+                <p style={{ margin: '2px 0 0 0', fontSize: '0.8rem', color: colors.textMuted, whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                  {userEmail || 'admin@rustbasic.dev'}
+                </p>
               </div>
             </div>
+
+            <form onSubmit={handleLogout} style={{ marginTop: '8px' }}>
+              <button
+                type="submit"
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  background: 'rgba(239, 68, 68, 0.08)',
+                  border: '1px solid rgba(239, 68, 68, 0.15)',
+                  borderRadius: '12px',
+                  color: '#ef4444',
+                  fontWeight: 700,
+                  fontSize: '0.85rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(239, 68, 68, 0.15)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(239, 68, 68, 0.08)';
+                }}
+              >
+                🚪 KELUAR SISTEM
+              </button>
+            </form>
           </div>
 
-          {/* Navigation links */}
-          <nav className="space-y-2">
-            <Link
-              href="/dashboard"
-              className="flex items-center space-x-3 w-full px-4 py-3 bg-indigo-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-indigo-600/10 transition-all duration-300"
-              style={{ textDecoration: 'none' }}
-            >
-              <span>📊</span>
-              <span>Dashboard Overview</span>
-            </Link>
-            <Link
-              href="/"
-              className="flex items-center space-x-3 w-full px-4 py-3 text-slate-400 hover:text-white rounded-xl font-semibold text-sm hover:bg-slate-800/30 transition-all duration-300"
-              style={{ textDecoration: 'none' }}
-            >
-              <span>🏠</span>
-              <span>Main Website</span>
-            </Link>
-          </nav>
-        </div>
+          {/* Server Info Panel */}
+          <div style={{
+            padding: '32px',
+            borderRadius: '24px',
+            border: `1px solid ${colors.cardBorder}`,
+            background: colors.cardBg,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '16px',
+          }}>
+            <h3 style={{
+              fontSize: '1.15rem',
+              fontWeight: 800,
+              color: colors.textMain,
+              margin: 0,
+            }}>
+              ⚙️ Informasi Kernel Server
+            </h3>
 
-        {/* Logout Form / Button */}
-        <div className="mt-8 md:mt-0">
-          <form onSubmit={handleLogout}>
-            <button
-              type="submit"
-              className="w-full py-3 px-4 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-400 rounded-xl font-bold text-sm transition-all duration-300 flex items-center justify-center space-x-2"
-            >
-              <span>🚪</span>
-              <span>KELUAR SISTEM</span>
-            </button>
-          </form>
-        </div>
-      </aside>
-
-      {/* Main Workspace */}
-      <main className="flex-1 p-6 md:p-12 overflow-y-auto">
-        <div className="max-w-6xl mx-auto">
-          {/* Header */}
-          <header className="flex flex-col md:flex-row md:items-center md:justify-between mb-10 gap-4">
-            <div>
-              <h1 className="text-3xl font-extrabold text-white tracking-tight">{title || 'Overview'}</h1>
-              <p className="text-slate-400 text-sm mt-1">Selamat datang kembali, kendalikan project Anda secara instan.</p>
-            </div>
-            <div>
-              <span className="inline-flex items-center px-4 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs font-bold text-slate-300 shadow-sm">
-                <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full mr-2 animate-ping" />
-                Server Status: <span className="text-emerald-400 ml-1">Running</span>
-              </span>
-            </div>
-          </header>
-
-          {/* Toast Notifications */}
-          <Toast flash={flash} />
-
-          {/* Stats Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
-            {/* Stat 1 */}
-            <div className="bg-slate-900/60 border border-slate-800/80 rounded-3xl p-6 relative overflow-hidden glassmorphism">
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-4">
-                User Terdaftar
-              </span>
-              <div className="flex items-baseline space-x-2">
-                <span className="text-5xl font-black text-white tracking-tight">{totalUsers || 0}</span>
-                <span className="text-emerald-400 text-sm font-bold">↑ 12%</span>
-              </div>
-            </div>
-
-            {/* Stat 2 */}
-            <div className="bg-slate-900/60 border border-slate-800/80 rounded-3xl p-6 relative overflow-hidden glassmorphism">
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-4">
-                Response Time
-              </span>
-              <div className="flex items-baseline space-x-1">
-                <span className="text-5xl font-black text-indigo-400 tracking-tight">24</span>
-                <span className="text-slate-400 text-lg font-bold">ms</span>
-              </div>
-            </div>
-
-            {/* Stat 3 */}
-            <div className="bg-slate-900/60 border border-slate-800/80 rounded-3xl p-6 relative overflow-hidden glassmorphism">
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-4">
-                Database Status
-              </span>
-              <div className="flex items-center space-x-3 mt-2">
-                <div className="w-3 h-3 bg-emerald-500 rounded-full shadow-[0_0_12px_#10b981]" />
-                <span className="text-xl font-extrabold text-emerald-400 tracking-wide uppercase">HEALTHY</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Main Info Panel */}
-          <div className="bg-slate-900/40 border border-slate-800/60 rounded-3xl p-8 glassmorphism">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h3 className="text-lg font-bold text-white">Informasi Kernel Server</h3>
-                <p className="text-xs text-slate-400 mt-0.5">Detail lingkungan runtime eksekusi Axum Anda.</p>
-              </div>
-              <span className="text-[10px] font-bold text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-3 py-1 rounded-full uppercase tracking-wider">
-                v2026.1
-              </span>
-            </div>
-
-            <div className="bg-slate-950 border border-slate-800/50 rounded-2xl p-6 font-mono text-xs text-emerald-400 leading-relaxed shadow-inner">
-              <div className="text-slate-600 mb-2">// RustBasic SPA Kernel Logs</div>
-              <div>[OK] Compiled with Axum 0.8.2</div>
-              <div>[OK] Database Pool: Sea-ORM Connection Established</div>
-              <div>[OK] Modern SPA Routing: Powered by Inertia.js Bridge</div>
-              <div>[OK] Single-Binary Mode: Compile-time embedding enabled</div>
-              <div>[OK] Workers: 8 logical threads spawned on CPU cores</div>
+            <div style={{
+              padding: '16px',
+              borderRadius: '12px',
+              fontFamily: 'monospace',
+              fontSize: '0.75rem',
+              background: isDark ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.03)',
+              border: `1px solid ${colors.cardBorder}`,
+              color: isDark ? '#34d399' : '#059669',
+              lineHeight: 1.6,
+            }}>
+              <div>[OK] Compiled with Rust Engine 0.8.2</div>
+              <div>[OK] Database Pool: Connection Established</div>
+              <div>[OK] Modern SPA Routing: Powered by Inertia.js</div>
             </div>
           </div>
         </div>
-      </main>
+      </div>
     </div>
   );
 }
@@ -1551,8 +2057,8 @@ export default function Dashboard({ title, userName, userEmail, totalUsers }) {
 use crate::app::models::users;
 use rustbasic_core::requests::Request;
 use rustbasic_core::server::AppState;
-use rustbasic_core::axum::{response::Response, extract::State};
-use rustbasic_core::sea_orm::{EntityTrait, PaginatorTrait};
+use rustbasic_core::{Response, State};
+use rustbasic_core::database::DB;
 use rustbasic_core::serde_json::json;
 
 pub struct DashboardController;
@@ -1560,8 +2066,8 @@ pub struct DashboardController;
 impl DashboardController {
     pub async fn index(State(state): State<AppState>, req: Request) -> Response {
         let user_id = req.session.get::<i32>("user_id").unwrap_or(0);
-        let user = users::Entity::find_by_id(user_id).one(&state.db).await.ok().flatten();
-        let total_users = users::Entity::find().count(&state.db).await.unwrap_or(0);
+        let user = DB::table(&state.db, "users").where_("id", user_id).first::<users::Model>().await.ok().flatten();
+        let total_users = DB::table(&state.db, "users").count().await.unwrap_or(0);
 
         inertia(&req, "Dashboard", json!({
             "title": "Dashboard",
@@ -1579,49 +2085,89 @@ impl DashboardController {
 
     println!("   {} Folder src/resources/js/Pages/Auth dan Dashboard siap.", "✅ Views:".green());
 
-    // 7. Update Welcome.jsx
-    let welcome_path = "src/resources/js/Pages/Welcome.jsx";
+    // 7. Update Welcome.tsx
+    let welcome_path = "src/resources/js/Pages/Welcome.tsx";
     if let Ok(content) = fs::read_to_string(welcome_path)
-        && content.contains("Backend Online") && !content.contains("auth_installed ?") {
-            let target = r#"          <div className="flex items-center gap-4">
-            <span className="inline-flex items-center gap-1.5 px-3 h-8 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-              <span className="w-2 h-2 rounded-full bg-emerald-400" style={{ boxShadow: "0 0 10px #34d399" }} />
-              Backend Online
-            </span>
-          </div>"#;
-
-            let replacement = r#"          <div className="flex items-center gap-4">
-            <span className="inline-flex items-center gap-1.5 px-3 h-8 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 mr-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-400" style={{ boxShadow: "0 0 10px #34d399" }} />
-              Backend Online
-            </span>
-            {auth_installed ? (
-              <Link 
-                href="/dashboard" 
-                className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-sm font-bold text-white transition-all duration-300"
-                style={{ textDecoration: 'none' }}
+        && !content.contains("auth_installed &&") {
+            let target = r#"              <Link
+                href="/about"
+                style={{
+                  padding: '16px 32px',
+                  borderRadius: '16px',
+                  background: 'linear-gradient(135deg, #e8520e, #d4470b)',
+                  fontWeight: 700,
+                  fontSize: '0.95rem',
+                  color: '#fff',
+                  textDecoration: 'none',
+                  boxShadow: '0 8px 32px rgba(232,82,14,0.35), inset 0 1px 0 rgba(255,255,255,0.15)',
+                  transition: 'all 0.3s ease',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}
               >
-                Dashboard
+                Jelajahi SPA →
+              </Link>"#;
+
+            let replacement = r#"              <Link
+                href="/about"
+                style={{
+                  padding: '16px 32px',
+                  borderRadius: '16px',
+                  background: 'linear-gradient(135deg, #e8520e, #d4470b)',
+                  fontWeight: 700,
+                  fontSize: '0.95rem',
+                  color: '#fff',
+                  textDecoration: 'none',
+                  boxShadow: '0 8px 32px rgba(232,82,14,0.35), inset 0 1px 0 rgba(255,255,255,0.15)',
+                  transition: 'all 0.3s ease',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}
+              >
+                Jelajahi SPA →
               </Link>
-            ) : (
-              <div className="flex gap-2">
-                <Link 
-                  href="/login" 
-                  className="px-4 py-2 rounded-lg border border-white/10 text-sm font-bold hover:bg-white/5 transition-all duration-300 text-gray-300 hover:text-white"
-                  style={{ textDecoration: 'none' }}
-                >
-                  Masuk
-                </Link>
-                <Link 
-                  href="/register" 
-                  className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-sm font-bold text-white transition-all duration-300"
-                  style={{ textDecoration: 'none' }}
-                >
-                  Daftar
-                </Link>
-              </div>
-            )}
-          </div>"#;
+              {auth_installed && (
+                <>
+                  <Link
+                    href="/login"
+                    style={{
+                      padding: '16px 32px',
+                      borderRadius: '16px',
+                      background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)',
+                      fontWeight: 700,
+                      fontSize: '0.95rem',
+                      color: isDark ? '#ccc' : '#444',
+                      textDecoration: 'none',
+                      border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+                      transition: 'all 0.3s ease',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                    }}
+                  >
+                    Masuk
+                  </Link>
+                  <Link
+                    href="/register"
+                    style={{
+                      padding: '16px 32px',
+                      borderRadius: '16px',
+                      background: 'linear-gradient(135deg, #4f46e5, #4338ca)',
+                      fontWeight: 700,
+                      fontSize: '0.95rem',
+                      color: '#fff',
+                      textDecoration: 'none',
+                      boxShadow: '0 8px 32px rgba(79,70,229,0.2)',
+                      transition: 'all 0.3s ease',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                    }}
+                  >
+                    Daftar
+                  </Link>
+                </>
+              )}"#;
 
             let updated = content.replace(target, replacement);
             fs::write(welcome_path, updated).ok();
@@ -1657,8 +2203,8 @@ pub async fn remove_auth() {
         let mut changed = false;
         
         // Remove imports
-        if content.contains("use rustbasic_core::axum::{Router, routing::{get, post}, middleware::from_fn};") {
-            content = content.replace("use rustbasic_core::axum::{Router, routing::{get, post}, middleware::from_fn};", "use rustbasic_core::axum::{Router, routing::get};");
+        if content.contains("use rustbasic_core::{Router, get, post, from_fn, AppState};") {
+            content = content.replace("use rustbasic_core::{Router, get, post, from_fn, AppState};", "use rustbasic_core::{Router, get, AppState};");
             changed = true;
         }
         
@@ -1680,8 +2226,8 @@ pub async fn remove_auth() {
         }
         
         // Re-add server::AppState if it was removed
-        if !content.contains("use rustbasic_core::server::AppState;") {
-            content = content.replace("use rustbasic_core::axum::{Router, routing::get};", "use rustbasic_core::axum::{Router, routing::get};\nuse rustbasic_core::server::AppState;");
+        if !content.contains("use rustbasic_core::{Router, get, AppState};") {
+            content = content.replace("use rustbasic_core::{Router, get};", "use rustbasic_core::{Router, get, AppState};");
         }
 
         // Remove auth_protected_routes logic and restore basic Router
@@ -1739,17 +2285,17 @@ pub async fn remove_auth() {
         println!("   {} {}", "✅ Deleted:".green(), model_path.cyan());
     }
 
-    // 5. Delete Components, React Pages/Auth & Dashboard.jsx
+    // 5. Delete Components, React Pages/Auth & Dashboard.tsx
     let components_dir = "src/resources/js/Components";
-    let toast_view = "src/resources/js/Components/Toast.jsx";
+    let toast_view = "src/resources/js/Components/Toast.tsx";
     if std::path::Path::new(toast_view).exists() {
         fs::remove_file(toast_view).ok();
     }
-    let alert_banner_view = "src/resources/js/Components/AlertBanner.jsx";
+    let alert_banner_view = "src/resources/js/Components/AlertBanner.tsx";
     if std::path::Path::new(alert_banner_view).exists() {
         fs::remove_file(alert_banner_view).ok();
     }
-    let form_input_view = "src/resources/js/Components/FormInput.jsx";
+    let form_input_view = "src/resources/js/Components/FormInput.tsx";
     if std::path::Path::new(form_input_view).exists() {
         fs::remove_file(form_input_view).ok();
     }
@@ -1765,7 +2311,7 @@ pub async fn remove_auth() {
         println!("   {} {}", "✅ Deleted:".green(), auth_page_dir.cyan());
     }
 
-    let dashboard_page = "src/resources/js/Pages/Dashboard.jsx";
+    let dashboard_page = "src/resources/js/Pages/Dashboard.tsx";
     if std::path::Path::new(dashboard_page).exists() {
         fs::remove_file(dashboard_page).ok();
         println!("   {} {}", "✅ Deleted:".green(), dashboard_page.cyan());
@@ -1820,6 +2366,12 @@ pub async fn remove_auth() {
             content = content.replace("pub mod password_resets;", "");
             changed = true;
         }
+        if content.contains("pub use password_resets::Entity as PasswordReset;") {
+            content = content.replace("#[allow(unused_imports)]\npub use password_resets::Entity as PasswordReset;\n", "");
+            content = content.replace("pub use password_resets::Entity as PasswordReset;\n", "");
+            content = content.replace("pub use password_resets::Entity as PasswordReset;", "");
+            changed = true;
+        }
         if changed {
             fs::write(models_mod_path, content).ok();
             println!("   {} {}", "📝 Updated:".blue(), models_mod_path.cyan());
@@ -1848,49 +2400,89 @@ pub async fn remove_auth() {
         }
     }
 
-    // 7.3 Restore Welcome.jsx
-    let welcome_path = "src/resources/js/Pages/Welcome.jsx";
+    // 7.3 Restore Welcome.tsx
+    let welcome_path = "src/resources/js/Pages/Welcome.tsx";
     if let Ok(content) = fs::read_to_string(welcome_path)
-        && content.contains("auth_installed ?") {
-            let target = r#"          <div className="flex items-center gap-4">
-            <span className="inline-flex items-center gap-1.5 px-3 h-8 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 mr-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-400" style={{ boxShadow: "0 0 10px #34d399" }} />
-              Backend Online
-            </span>
-            {auth_installed ? (
-              <Link 
-                href="/dashboard" 
-                className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-sm font-bold text-white transition-all duration-300"
-                style={{ textDecoration: 'none' }}
+        && content.contains("auth_installed &&") {
+            let target = r#"              <Link
+                href="/about"
+                style={{
+                  padding: '16px 32px',
+                  borderRadius: '16px',
+                  background: 'linear-gradient(135deg, #e8520e, #d4470b)',
+                  fontWeight: 700,
+                  fontSize: '0.95rem',
+                  color: '#fff',
+                  textDecoration: 'none',
+                  boxShadow: '0 8px 32px rgba(232,82,14,0.35), inset 0 1px 0 rgba(255,255,255,0.15)',
+                  transition: 'all 0.3s ease',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}
               >
-                Dashboard
+                Jelajahi SPA →
               </Link>
-            ) : (
-              <div className="flex gap-2">
-                <Link 
-                  href="/login" 
-                  className="px-4 py-2 rounded-lg border border-white/10 text-sm font-bold hover:bg-white/5 transition-all duration-300 text-gray-300 hover:text-white"
-                  style={{ textDecoration: 'none' }}
-                >
-                  Masuk
-                </Link>
-                <Link 
-                  href="/register" 
-                  className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-sm font-bold text-white transition-all duration-300"
-                  style={{ textDecoration: 'none' }}
-                >
-                  Daftar
-                </Link>
-              </div>
-            )}
-          </div>"#;
+              {auth_installed && (
+                <>
+                  <Link
+                    href="/login"
+                    style={{
+                      padding: '16px 32px',
+                      borderRadius: '16px',
+                      background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)',
+                      fontWeight: 700,
+                      fontSize: '0.95rem',
+                      color: isDark ? '#ccc' : '#444',
+                      textDecoration: 'none',
+                      border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+                      transition: 'all 0.3s ease',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                    }}
+                  >
+                    Masuk
+                  </Link>
+                  <Link
+                    href="/register"
+                    style={{
+                      padding: '16px 32px',
+                      borderRadius: '16px',
+                      background: 'linear-gradient(135deg, #4f46e5, #4338ca)',
+                      fontWeight: 700,
+                      fontSize: '0.95rem',
+                      color: '#fff',
+                      textDecoration: 'none',
+                      boxShadow: '0 8px 32px rgba(79,70,229,0.2)',
+                      transition: 'all 0.3s ease',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                    }}
+                  >
+                    Daftar
+                  </Link>
+                </>
+              )}"#;
 
-            let replacement = r#"          <div className="flex items-center gap-4">
-            <span className="inline-flex items-center gap-1.5 px-3 h-8 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-              <span className="w-2 h-2 rounded-full bg-emerald-400" style={{ boxShadow: "0 0 10px #34d399" }} />
-              Backend Online
-            </span>
-          </div>"#;
+            let replacement = r#"              <Link
+                href="/about"
+                style={{
+                  padding: '16px 32px',
+                  borderRadius: '16px',
+                  background: 'linear-gradient(135deg, #e8520e, #d4470b)',
+                  fontWeight: 700,
+                  fontSize: '0.95rem',
+                  color: '#fff',
+                  textDecoration: 'none',
+                  boxShadow: '0 8px 32px rgba(232,82,14,0.35), inset 0 1px 0 rgba(255,255,255,0.15)',
+                  transition: 'all 0.3s ease',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}
+              >
+                Jelajahi SPA →
+              </Link>"#;
 
             let updated = content.replace(target, replacement);
             fs::write(welcome_path, updated).ok();
@@ -1915,45 +2507,24 @@ pub async fn remove_auth() {
         format!("sqlite:database/{}.sqlite?mode=rwc", db_database)
     };
 
-    if let Ok(db) = sea_orm::Database::connect(db_url).await {
-        use sea_orm::ConnectionTrait;
-        let table_name = if db_connection == "mysql" { "sea_orm_migrations" } else { "seaql_migrations" };
-        let sql = format!("DELETE FROM {} WHERE version LIKE '%_create_password_resets_table'", table_name);
-        let db_backend = if db_connection == "mysql" { sea_orm::DbBackend::MySql } else { sea_orm::DbBackend::Sqlite };
-        let _ = db.execute(sea_orm::Statement::from_string(db_backend, sql)).await;
+    sqlx::any::install_default_drivers();
+    if let Ok(pool) = sqlx::AnyPool::connect(&db_url).await {
+        let sql = "DELETE FROM migration_history WHERE version LIKE '%_create_password_resets_table'";
+        let _ = sqlx::query(sql).execute(&pool).await;
         println!("   {} {}", "✅ Cleaned:".green(), "Database migration records removed.".cyan());
     }
 
-    // Clean up validator and sea-orm-migration from Cargo.toml
-    if let Ok(mut content) = fs::read_to_string("Cargo.toml") {
-        let mut changed = false;
-        
-        let validator_lines = [
-            "validator = { version = \"0.20\", features = [\"derive\"] }\n",
-            "validator = { version = \"0.20\", features = [\"derive\"] }",
-        ];
-        for line in &validator_lines {
-            if content.contains(line) {
-                content = content.replace(line, "");
-                changed = true;
-            }
-        }
-        
-        let migration_lines = [
-            "sea-orm-migration = { version = \"1.1\", features = [\"runtime-tokio-rustls\", \"sqlx-sqlite\", \"sqlx-mysql\"], default-features = false }\n",
-            "sea-orm-migration = { version = \"1.1\", features = [\"runtime-tokio-rustls\", \"sqlx-sqlite\", \"sqlx-mysql\"], default-features = false }",
-        ];
-        for line in &migration_lines {
-            if content.contains(line) {
-                content = content.replace(line, "");
-                changed = true;
-            }
-        }
-        
-        if changed {
-            fs::write("Cargo.toml", content).ok();
-            println!("   {} {}", "📝 Updated:".blue(), "Cargo.toml dependencies cleaned".cyan());
-        }
+
+    // Clean up email files
+    let test_email_path = "src/bin/send_test_email.rs";
+    if std::path::Path::new(test_email_path).exists() {
+        fs::remove_file(test_email_path).ok();
+        println!("   {} {}", "✅ Deleted:".green(), test_email_path.cyan());
+    }
+    let email_views_dir = "src/resources/views/emails";
+    if std::path::Path::new(email_views_dir).exists() {
+        fs::remove_dir_all(email_views_dir).ok();
+        println!("   {} {}", "✅ Deleted:".green(), email_views_dir.cyan());
     }
 
     println!("\n{}", "✨ Authentication removed successfully!".green().bold());

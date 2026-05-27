@@ -1,48 +1,74 @@
-# RustBasic Breeze
+# 🔐 RustBasic Breeze
 
-**Authentication scaffolding for the RustBasic Framework.**
+## 📝 Kata Pengantar
 
-RustBasic Breeze provides a simple and fast way to set up a complete authentication system in your RustBasic applications. It automatically scaffolds all the necessary routes, controllers, models, and views (React/Inertia.js components) required for user authentication.
+Selamat datang di **RustBasic Breeze**. Paket ini menyediakan solusi *authentication scaffolding* instan yang aman dan premium untuk aplikasi berbasis **RustBasic Framework**. Breeze secara otomatis menyusun dan mengintegrasikan seluruh komponen backend (rute auth, middleware session, model database, migrasi tabel token reset) dan komponen visual frontend React (Login, Register, Dashboard, ResetPassword) ke dalam struktur proyek lokal Anda dalam hitungan detik.
 
-## Features
+---
 
-- **Login & Registration**: Ready-to-use authentication views and backend logic.
-- **Password Reset**: Complete forgot password and reset password flow, including email template scaffolding and token management.
-- **Session-based Authentication**: Secure session management using `rustbasic-core`.
-- **Database Models**: Automatically generates SeaORM models and migrations for users and password resets.
-- **Modern UI**: Scaffolds beautiful, responsive React components using Inertia.js and Tailwind CSS (or standard CSS).
+## 🛠️ Script Contoh
 
-## Installation
-
-Run the following command in your project directory:
-
-```bash
-cargo add rustbasic-breeze
+### A. Penambahan Dependensi (`Cargo.toml`)
+```toml
+[dependencies]
+rustbasic-core = "0.1"
+rustbasic-breeze = "0.0"
 ```
 
-## Usage
-
-You can use the scaffolding function in your CLI or setup scripts.
-
+### B. Inisiasi Scaffolding Autentikasi dalam Kode Rust (`src/main.rs` / CLI Utility)
 ```rust
 use rustbasic_breeze::make_auth;
 
 #[tokio::main]
 async fn main() {
-    // Scaffold authentication files, routes, and views
+    // Menjalankan perintah pembuatan file template login & register secara otomatis
     make_auth().await;
 }
 ```
 
-Running `make_auth()` will automatically generate:
-- Authentication routes (`src/routes/auth.rs`)
-- Authentication middleware (`src/app/http/middleware/auth.rs`)
-- `AuthController` for handling login, registration, and password resets
-- `password_resets` SeaORM model and database migration
-- React components for the frontend (`src/resources/js/Pages/Auth/*.jsx`)
+### C. Proteksi Rute dengan Middleware Autentikasi (`src/routes/web.rs`)
+```rust
+use rustbasic_core::{Router, get, from_fn, AppState};
+use crate::app::http::controllers::dashboard_controller;
+use crate::app::http::middleware::auth::auth_middleware;
 
-After scaffolding, make sure to run your database migrations so the `password_resets` table is created.
+pub fn router() -> Router<AppState> {
+    Router::new()
+        // Mengamankan halaman dashboard dari akses tamu yang belum login
+        .route("/dashboard", get(dashboard_controller::index))
+        .layer(from_fn(auth_middleware))
+}
+```
 
-## License
+---
 
-This project is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## 🔄 Perbandingan Pemakaian (Autentikasi Manual vs Scaffolding Breeze)
+
+Berikut adalah perbandingan pemakaian dan kecepatan implementasi sistem keamanan akun pada RustBasic:
+
+| Parameter Evaluasi | Membangun Sistem Secara Manual | Menggunakan Scaffolding Breeze |
+| :--- | :--- | :--- |
+| **Waktu Pengerjaan** | Membutuhkan waktu berhari-hari untuk merancang model, controller, & UI. | Instan, file langsung disalin otomatis ke struktur folder proyek. |
+| **Konsistensi Struktur** | Berisiko tidak konsisten dan menyulitkan kolaborasi tim. | Sangat rapi, mengikuti standar konvensi direktori RustBasic. |
+| **Fitur Reset Password** | Harus membuat UUID token, tabel verifikasi, & kirim email sendiri. | Sudah siap pakai beserta template email HTML & sistem Lettre SMTP. |
+| **UI Halaman Frontend** | Harus mendesain formulir masuk & daftar sendiri dari awal. | Disediakan halaman login split-screen modern & responsif. |
+
+---
+
+## 📊 Tabel Ringkasan Komponen yang Dihasilkan
+
+Berikut adalah daftar berkas utama yang disalin otomatis ke folder proyek Anda setelah menjalankan modul Breeze:
+
+| Nama Berkas / Komponen | Lokasi Penyimpanan Berkas | Deskripsi Fungsi & Kegunaan |
+| :--- | :--- | :--- |
+| **AuthController** | `src/app/http/controllers/auth/auth_controller.rs` | Mengolah input pendaftaran, verifikasi login, logout, & reset password. |
+| **AuthMiddleware** | `src/app/http/middleware/auth.rs` | Membelokkan akses tamu tak dikenal kembali ke halaman `/login`. |
+| **Rute Autentikasi** | `src/routes/auth.rs` | Rute URL web penanganan form masuk, daftar, & lupa sandi. |
+| **Halaman React (SPA)** | `src/resources/js/Pages/Auth/` | Kumpulan file UI React (.jsx) halaman login, register, & reset sandi. |
+| **Template Email HTML** | `src/resources/views/emails/` | Template email premium untuk tautan reset kata sandi & ucapan selamat datang. |
+
+---
+
+## 🏁 Penutup
+
+Dengan mengaktifkan modul autentikasi **RustBasic Breeze**, Anda mendapatkan fondasi keamanan sistem akun yang teruji secara industri, terlindung dari eksploitasi celah CSRF, serta siap melayani pengguna dengan tampilan visual yang sangat premium. Untuk panduan lengkap dalam Bahasa Indonesia, silakan merujuk ke berkas panduan internal di: [Panduan Autentikasi Breeze](docs/auth_cli.md).
